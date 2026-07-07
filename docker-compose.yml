@@ -1,0 +1,54 @@
+version: "3.9"
+
+services:
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: cancer-mama-backend
+    ports:
+      - "8000:8000"
+    environment:
+      MODEL_PATH: /app/models/modelo_cancer_mama.keras
+      FRONTEND_URL: http://localhost:3000
+      ENVIRONMENT: development
+      LOG_LEVEL: INFO
+      APPLY_CLAHE: "true"
+      PREDICTION_THRESHOLD: "0.5"
+      MAX_FILE_SIZE_MB: "5"
+      RATE_LIMIT_PREDICT: 10/minute
+      RATE_LIMIT_DEFAULT: 60/minute
+      HISTORY_MAX_ITEMS: "50"
+    volumes:
+      # Monta tu modelo entrenado sin tener que reconstruir la imagen cada vez que lo cambies.
+      - ./backend/models:/app/models
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8000/health')"]
+      interval: 15s
+      timeout: 5s
+      retries: 5
+      start_period: 20s
+    restart: unless-stopped
+    networks:
+      - cancer-mama-net
+
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+      args:
+        # URL que verá el NAVEGADOR del usuario (no la red interna de Docker),
+        # por eso apunta a localhost:8000 y no a http://backend:8000.
+        VITE_API_URL: http://localhost:8000
+    container_name: cancer-mama-frontend
+    ports:
+      - "3000:80"
+    depends_on:
+      - backend
+    restart: unless-stopped
+    networks:
+      - cancer-mama-net
+
+networks:
+  cancer-mama-net:
+    driver: bridge

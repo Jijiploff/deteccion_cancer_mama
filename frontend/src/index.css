@@ -1,0 +1,63 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  --color-bg: 242 244 245;
+  --color-surface: 255 255 255;
+  --color-ink: 22 32 42;
+  --color-muted: 90 104 112;
+  --color-border: 216 222 225;
+  --color-accent: 63 159 176;
+  --color-benign: 62 143 114;
+  --color-malignant: 184 80 61;
+}
+
+.dark {
+  --color-bg: 14 20 23;
+  --color-surface: 23 31 36;
+  --color-ink: 231 237 239;
+  --color-muted: 148 163 170;
+  --color-border: 41 52 59;
+  --color-accent: 79 179 196;
+  --color-benign: 90 178 148;
+  --color-malignant: 214 108 87;
+}
+
+* {
+  scrollbar-color: rgb(var(--color-border)) transparent;
+}
+
+html,
+body {
+  background-color: rgb(var(--color-bg));
+  color: rgb(var(--color-ink));
+}
+
+body {
+  font-family: 'Inter', sans-serif;
+}
+
+/* Foco visible en todo el sitio: nunca lo quitamos, solo lo re-estilizamos */
+:focus-visible {
+  outline: 2px solid rgb(var(--color-accent));
+  outline-offset: 2px;
+  border-radius: 2px;
+}
+
+/* Textura sutil tipo grano de placa radiográfica en el panel lightbox */
+.film-grain {
+  background-image:
+    radial-gradient(rgb(var(--color-ink) / 0.035) 1px, transparent 1px);
+  background-size: 3px 3px;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.001ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.001ms !important;
+  }
+}
