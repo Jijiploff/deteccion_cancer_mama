@@ -1,0 +1,868 @@
+===============================================================================
+ PLAN DE IMPLEMENTACIÓN - SISTEMA DETECCIÓN DE CÁNCER DE MAMA
+===============================================================================
+
+Fecha: Julio 2026
+Versión: 1.0
+
+===============================================================================
+1. DIAGRAMA DE ARQUITECTURA
+===============================================================================
+
+```mermaid
+graph TB
+    subgraph "Usuarios"
+        USER["Usuario (Médico/Radiológico)"]
+        TRAINER["Científico de Datos"]
+    end
+
+    subgraph "Frontend (Vercel)"
+        REACT["React SPA (Vite + Tailwind)"]
+        NGINX["Nginx (servir SPA estática)"]
+        UPLOAD["Upload + Resultados"]
+        REACT --> NGINX
+        REACT --> UPLOAD
+    end
+
+    subgraph "Backend (Render - FastAPI)"
+        FASTAPI["FastAPI + Uvicorn"]
+        MODEL_HANDLER["ModelHandler (TensorFlow/Keras)"]
+        SECURITY["Validación de Archivos"]
+        HISTORY["Historial en memoria (deque)"]
+        FASTAPI --> MODEL_HANDLER
+        FASTAPI --> SECURITY
+        FASTAPI --> HISTORY
+    end
+
+    subgraph "Streamlit Dashboard (Render / Local)"
+        STREAMLIT["Streamlit App"]
+        LOGIN_ST["Login Dashboard"]
+        EDA_PAGE["1. EDA"]
+        LIGHT_TRAIN["2. Entrenamiento Ligero<br/>(XGBoost, Random Forest)"]
+        CV_PAGE["3. Validación Cruzada"]
+        HP_PAGE["4. Hiperparámetros"]
+        STAT_PAGE["5. Pruebas Estadísticas"]
+        REPORT_PAGE["6. Reportes"]
+        STREAMLIT --> LOGIN_ST
+        STREAMLIT --> EDA_PAGE
+        STREAMLIT --> LIGHT_TRAIN
+        STREAMLIT --> CV_PAGE
+        STREAMLIT --> HP_PAGE
+        STREAMLIT --> STAT_PAGE
+        STREAMLIT --> REPORT_PAGE
+    end
+
+    subgraph "Google Colab (GPU)"
+        COLAB["Notebook Colab"]
+        COLAB_EDA["EDA Completo"]
+        HEAVY_TRAIN["Entrenamiento Pesado<br/>(CNN EfficientNet, Ensemble)"]
+        COLAB_SAVE["Guardar Modelos .keras / .h5 / .pkl"]
+        COLAB --> COLAB_EDA
+        COLAB --> HEAVY_TRAIN
+        HEAVY_TRAIN --> COLAB_SAVE
+    end
+
+    subgraph "Google Drive (/content/drive/MyDrive/DataSet)"
+        DRIVE["Google Drive"]
+        CBIS["CSVFiles/ (CBIS-DDSM)"]
+        WISC["BreastCancer_Tabular/ (Wisconsin)"]
+        IMGS["BreastCancer_Images/jpeg/"]
+        DRIVE_MODELS["Models/ (modelos entrenados)"]
+        DRIVE_RESULTS["Resultados/ (reportes)"]
+        DRIVE --> CBIS
+        DRIVE --> WISC
+        DRIVE --> IMGS
+        DRIVE --> DRIVE_MODELS
+        DRIVE --> DRIVE_RESULTS
+    end
+
+    subgraph "Modelos en Producción"
+        BEST_H5["best_model.h5"]
+        BEST_PKL["best_model.pkl"]
+    end
+
+    USER -->|HTTPS| REACT
+    TRAINER --> COLAB
+    TRAINER --> STREAMLIT
+
+    REACT -->|API Calls| FASTAPI
+    FASTAPI --> MODEL_HANDLER
+    MODEL_HANDLER --> BEST_H5
+    MODEL_HANDLER --> BEST_PKL
+
+    COLAB -->|lee datos| DRIVE
+    COLAB -->|guarda modelos| DRIVE_MODELS
+    STREAMLIT -->|lee datos| DRIVE
+    STREAMLIT -->|entrena modelos ligeros y guarda| DRIVE_MODELS
+    STREAMLIT -->|genera reportes| DRIVE_RESULTS
+
+    DRIVE_MODELS -->|descargar y copiar manual| BEST_H5
+    DRIVE_MODELS -->|descargar y copiar manual| BEST_PKL
+
+    subgraph "Despliegue"
+        VERCEL["Vercel (frontend)"]
+        RENDER_API["Render (backend API)"]
+    end
+```
+
+===============================================================================
+2. DIAGRAMA DE COMPONENTES
+===============================================================================
+
+```mermaid
+graph TB
+    subgraph "Frontend (React)"
+        APP["App.jsx (state machine)"]
+        HEADER["Header (dark mode toggle)"]
+        HERO["Hero (presentación)"]
+        UPLOAD["UploadPanel (drag & drop)"]
+        CLINICAL["ClinicalForm (BI-RADS + Wisconsin)"]
+        RESULT["ResultPanel (resultados)"]
+        GAUGE["ConfidenceGauge (barra)"]
+        HISTORY["HistoryList"]
+        LOGIN_CP["Login (autenticación)"]
+        DASH_CP["Dashboard (KPIs)"]
+        SPINNER["Spinner"]
+        API["api.js (fetch wrapper)"]
+        DARK["useDarkMode (hook)"]
+        HIST_HOOK["useHistory (hook)"]
+
+        APP --> HEADER
+        APP --> HERO
+        APP --> UPLOAD
+        APP --> CLINICAL
+        APP --> RESULT
+        APP --> HISTORY
+        APP --> LOGIN_CP
+        APP --> DASH_CP
+        RESULT --> GAUGE
+        RESULT --> SPINNER
+        APP --> API
+        APP --> DARK
+        APP --> HIST_HOOK
+        HIST_HOOK --> API
+    end
+
+    subgraph "Backend (FastAPI)"
+        MAIN["main.py (endpoints)"]
+        CONFIG["config.py (Settings)"]
+        LOGGING["logging_config.py"]
+        MODEL_HANDLER["model_handler.py"]
+        SECURITY["security.py"]
+        SCHEMAS["schemas.py (Pydantic)"]
+
+        MAIN --> CONFIG
+        MAIN --> LOGGING
+        MAIN --> MODEL_HANDLER
+        MAIN --> SECURITY
+        MAIN --> SCHEMAS
+    end
+
+    subgraph "Training (Streamlit)"
+        S_APP["app.py (login + nav)"]
+        S_EDA["pages/01_EDA.py"]
+        S_TRAIN["pages/02_Training.py"]
+        S_CV["pages/03_CrossValidation.py"]
+        S_HP["pages/04_HyperparameterTuning.py"]
+        S_STAT["pages/05_StatisticalTests.py"]
+        S_REPORT["pages/06_Reports.py"]
+
+        M_AUTH["modules/auth.py"]
+        M_EDA["modules/eda.py"]
+        M_MODELS["modules/models.py"]
+        M_CV["modules/cross_validation.py"]
+        M_HP["modules/hyperparameter_tuning.py"]
+        M_STAT["modules/statistical_tests.py"]
+        M_REPORT["modules/reports.py"]
+        M_VIZ["modules/visualization.py"]
+
+        S_APP --> M_AUTH
+        S_EDA --> M_EDA
+        S_TRAIN --> M_MODELS
+        S_CV --> M_CV
+        S_HP --> M_HP
+        S_STAT --> M_STAT
+        S_REPORT --> M_REPORT
+        M_REPORT --> M_VIZ
+    end
+
+    subgraph "Google Drive (Datos)"
+        GDRIVE["/content/drive/MyDrive/DataSet/"]
+        G_CSV["CSVFiles/"]
+        G_IMG["BreastCancer_Images/jpeg/"]
+        G_TAB["BreastCancer_Tabular/"]
+        G_MOD["Models/"]
+        G_RES["Resultados/"]
+        GDRIVE --> G_CSV
+        GDRIVE --> G_IMG
+        GDRIVE --> G_TAB
+        GDRIVE --> G_MOD
+        GDRIVE --> G_RES
+    end
+
+    M_EDA --> GDRIVE
+    M_MODELS --> GDRIVE
+
+    API <-->|HTTP| MAIN
+```
+
+```
+
+===============================================================================
+3. ESTRUCTURA DE CARPETAS
+===============================================================================
+
+deteccion_cancer_mama/
+│
+├── .github/
+│   └── workflows/
+│       └── deploy.yml                    # [NUEVO] CI/CD automatizado
+│
+├── backend/                              # [EXISTE] API de inferencia
+│   ├── app/
+│   │   ├── __init__.py
+│   │   ├── main.py                       # Endpoints: /health, /predict, /history, /auth/login
+│   │   ├── config.py                     # Settings, defaults, paths
+│   │   ├── model_handler.py             # Carga de modelos + preprocesamiento + predict
+│   │   ├── schemas.py                    # Pydantic request/response models
+│   │   ├── security.py                   # Validación de archivos subidos
+│   │   └── logging_config.py             # Configuración de logs
+│   ├── models/                           # [EXISTE] Modelos entrenados (.keras, .h5, .pkl)
+│   │   ├── best_cnn_efficientnet.h5
+│   │   ├── cnn_efficientnet_*.keras
+│   │   ├── ensemble_*.keras
+│   │   └── tabular_*.pkl
+│   ├── CSVFiles/                         # [EXISTE] Datasets CSV
+│   │   ├── calc_case_description_train_set.csv
+│   │   ├── calc_case_description_test_set.csv
+│   │   ├── mass_case_description_train_set.csv
+│   │   ├── mass_case_description_test_set.csv
+│   │   ├── data.csv                      # Wisconsin
+│   │   ├── dicom_info.csv
+│   │   └── meta.csv
+│   ├── requirements.txt
+│   ├── Dockerfile
+│   ├── .dockerignore
+│   ├── .env
+│   └── .env.example
+│
+├── frontend/                             # [EXISTE] React SPA
+│   ├── public/
+│   ├── src/
+│   │   ├── main.jsx
+│   │   ├── index.css                     # Tailwind
+│   │   ├── App.jsx                        # State machine principal
+│   │   ├── api.js                        # Fetch wrapper
+│   │   ├── components/
+│   │   │   ├── Header.jsx
+│   │   │   ├── Hero.jsx
+│   │   │   ├── UploadPanel.jsx
+│   │   │   ├── ClinicalForm.jsx
+│   │   │   ├── ResultPanel.jsx
+│   │   │   ├── ConfidenceGauge.jsx
+│   │   │   ├── HistoryList.jsx
+│   │   │   ├── Spinner.jsx
+│   │   │   ├── Tooltip.jsx
+│   │   │   ├── Login.jsx                 # [NUEVO] Formulario de login
+│   │   │   └── Dashboard.jsx            # [NUEVO] Dashboard protegido
+│   │   └── hooks/
+│   │       ├── useDarkMode.js
+│   │       └── useHistory.js
+│   ├── index.html
+│   ├── vite.config.js
+│   ├── tailwind.config.js
+│   ├── postcss.config.js
+│   ├── package.json
+│   ├── Dockerfile
+│   ├── nginx.conf
+│   ├── vercel.json                       # [NUEVO] Config Vercel
+│   ├── .env
+│   └── .env.example
+│
+├── training/                             # [NUEVO] Streamlit - dashboard y entrenamiento ligero
+│   ├── app.py                            # Main: login + navegación entre páginas
+│   ├── config.py                         # Configuración (Drive por defecto, local fallback)
+│   ├── pages/
+│   │   ├── 01_Dashboard.py              # Dashboard post-login (KPIs globales)
+│   │   ├── 02_EDA.py                    # Análisis exploratorio interactivo
+│   │   ├── 03_Training.py              # Entrenamiento ligero (XGBoost, Random Forest)
+│   │   ├── 04_CrossValidation.py       # Validación cruzada (5-fold configurable)
+│   │   ├── 05_HyperparameterTuning.py  # GridSearch / búsqueda de parámetros
+│   │   ├── 06_StatisticalTests.py      # McNemar, Wilcoxon
+│   │   └── 07_Reports.py              # Exportar PDF, Word, Excel
+│   ├── modules/
+│   │   ├── __init__.py
+│   │   ├── auth.py                     # Autenticación (usuarios desde .env)
+│   │   ├── eda.py                      # EDA completo (usa rutas Drive)
+│   │   ├── models.py                   # Entrenamiento modelos tabulares
+│   │   ├── cross_validation.py         # StratifiedKFold (n_splits configurable)
+│   │   ├── hyperparameter_tuning.py   # GridSearchCV / RandomizedSearch
+│   │   ├── statistical_tests.py       # McNemar + Wilcoxon con interpretación
+│   │   ├── reports.py                 # Generación PDF, Word, Excel
+│   │   └── visualization.py           # Matrices confusión, ROC, heatmaps
+│   ├── requirements.txt
+│   ├── Dockerfile
+│   ├── .env.example
+│   └── .streamlit/
+│       └── config.toml
+│
+├── docs/                                # [EXISTE] Documentación
+│   ├── cancer_de_mama_is.py            # Notebook Colab completo
+│   ├── REPORTE_MODELOS.md
+│   ├── MANUAL_DE_INSTALACION.md
+│   ├── MANUAL_DE_USUARIO.md
+│   ├── DIAGRAMAS.md
+│   ├── _CODIGO_FUENTE_CONTENIDO.txt
+│   └── ...
+│
+├── docker-compose.yml                   # [EXISTE] + servicio training
+├── PLAN.txt                             # [NUEVO] Este archivo
+└── README.md
+
+
+===============================================================================
+4. PLAN DE IMPLEMENTACIÓN POR FASES
+===============================================================================
+
+---------------------------------------------------------------------------
+FASE 1: STREAMLIT - ESTRUCTURA BASE + AUTENTICACIÓN (Completada)
+---------------------------------------------------------------------------
+
+Objetivo: La app Streamlit lee datos desde Google Drive (estructura original del
+notebook Colab) y los modelos se guardan en Drive también.
+Dataset base: /content/drive/MyDrive/DataSet/
+  ├── CSVFiles/                    (calc_cases, mass_cases, meta.csv, etc.)
+  ├── BreastCancer_Images/jpeg/    (imágenes DICOM)
+  ├── BreastCancer_Tabular/        (data.csv - Wisconsin)
+  ├── Database/
+  ├── Models/                      (modelos entrenados)
+  └── Resultados/                  (reportes generados)
+
+[1.1] Crear carpeta training/ y estructura inicial
+Archivos creados:
+  - training/app.py
+  - training/config.py              (DRIVE_BASE por defecto: /content/drive/MyDrive/DataSet)
+  - training/modules/__init__.py
+  - training/modules/auth.py
+  - training/requirements.txt
+  - training/.env.example
+  - training/Dockerfile
+  - training/.streamlit/config.toml
+  - docker-compose.yml (+ servicio training)
+
+[1.2] Autenticación (modules/auth.py)
+  - Login usuario/contraseña desde variables de entorno
+  - Session state de Streamlit
+  - Logout con rerun
+
+[1.3] app.py principal
+  - Sidebar con 7 páginas: Dashboard, EDA, Training, CV, HP, Stats, Reports
+  - Protegido con require_auth()
+
+[1.4] Dashboard (pages/01_Dashboard.py)
+  - KPIs desde Drive: CSV, modelos, casos Wisconsin
+  - Pestañas: Google Drive / Local fallback
+  - Flujo recomendado mostrado
+
+---------------------------------------------------------------------------
+FASE 2: STREAMLIT - MÓDULO EDA (En progreso)
+---------------------------------------------------------------------------
+
+[2.1] Reutilizar clase BreastCancerEDA del notebook existente
+  - Mantener rutas Drive originales (/content/drive/MyDrive/DataSet)
+  - La clase ya lee CSVFiles/, BreastCancer_Tabular/ e imágenes
+  - Integrar con caching de Streamlit (@st.cache_data)
+  - Usar config.py DRIVE_BASE como ruta configurable
+
+[2.2] Implementar módulo eda.py completo:
+  a) Carga de datos desde Drive:
+     - CSVFiles/calc_case_description_train_set.csv
+     - CSVFiles/calc_case_description_test_set.csv
+     - CSVFiles/mass_case_description_train_set.csv
+     - CSVFiles/mass_case_description_test_set.csv
+     - CSVFiles/meta.csv, dicom_info.csv
+     - BreastCancer_Tabular/data.csv (Wisconsin)
+
+  b) Limpieza de datos:
+     - Manejo de valores nulos
+     - Eliminación de columnas irrelevantes (id, Unnamed: 32)
+     - Consistentización de tipos
+
+  c) Estadísticos descriptivos:
+     - Media, desviación estándar, min, max, cuartiles
+     - Por tipo de lesión (calcificación vs masa)
+     - Por diagnóstico (BENIGN vs MALIGNANT)
+
+  d) Análisis de distribución:
+     - Distribución de patologías (gráficos de pastel)
+     - Distribución BI-RADS (assessment)
+     - Distribución subtlety (dificultad de detección)
+     - Distribución de edades
+
+  e) Análisis de correlación:
+     - Matriz de correlación (heatmap) para Wisconsin
+     - Correlación entre características clínicas
+
+  f) Visualizaciones:
+     - Pie charts de distribución (Plotly interactivo)
+     - Boxplots comparativos BENIGN vs MALIGNANT
+     - Histogramas de características principales
+     - Heatmap de correlación
+     - Pairplot de características top
+
+[2.3] Página EDA (pages/02_EDA.py):
+  - Pestañas: Resumen / Distribuciones / Correlaciones / Datos crudos
+  - Selectores interactivos (elegir dataset, características)
+  - Tablas expandibles
+  - Descarga de estadísticas como CSV
+
+---------------------------------------------------------------------------
+FASE 3: STREAMLIT - MÓDULO DE ENTRENAMIENTO (Modelos ligeros)
+---------------------------------------------------------------------------
+
+NOTA: El entrenamiento pesado (CNN EfficientNet, Ensemble Híbrido) se realiza
+en Google Colab con GPU. En Streamlit se entrenan modelos tabulares ligeros
+(XGBoost, Random Forest) para experimentación rápida y comparación.
+
+[3.1] Implementar módulo models.py:
+
+  Modelo Clásico 1 - XGBoost:
+    - Entrenamiento con datos Wisconsin (30 features)
+    - XGBClassifier con parámetros base
+    - Reporte: accuracy, precision, recall, f1, auc-roc
+    - Matriz de confusión
+    - Curva ROC
+    - Feature importance plot
+    - Tiempo de entrenamiento
+
+  Modelo Clásico 2 - Random Forest:
+    - Entrenamiento con datos Wisconsin
+    - RandomForestClassifier con parámetros base
+    - Mismas métricas y gráficos que XGBoost
+
+  Tabla comparativa de resultados:
+    - Modelo | Accuracy | Precision | Recall | F1 | AUC | Tiempo (s)
+    - Resaltar mejor modelo en cada métrica
+
+  Guardado del mejor modelo en Drive:
+    - .pkl para modelo tabular (en DRIVE_BASE /Models/)
+    - Metadata JSON con: fecha, métricas, parámetros
+
+[3.2] Página Training (pages/03_Training.py):
+  - Paso 1: Seleccionar modelos a entrenar (checkboxes)
+  - Paso 2: Configurar parámetros básicos
+  - Paso 3: Botón "Iniciar Entrenamiento" con barra de progreso
+  - Paso 4: Mostrar resultados:
+    * Tabla comparativa
+    * Matrices de confusión lado a lado
+    * Curvas ROC superpuestas
+    * Feature importance
+  - Paso 5: Botón "Guardar Mejor Modelo en Drive"
+
+---------------------------------------------------------------------------
+FASE 4: STREAMLIT - VALIDACIÓN CRUZADA
+---------------------------------------------------------------------------
+
+[4.1] Implementar módulo cross_validation.py:
+  - StratifiedKFold con n_splits desde UI (default: 5)
+  - Para cada modelo seleccionado:
+    * Entrenar en K-1 folds, validar en 1 fold
+    * Repetir K veces
+    * Almacenar accuracy, auc por fold
+  - Resultados:
+    * Tabla: Fold | Accuracy | AUC
+    * Estadísticos: Media, Desv. Estándar, Min, Max
+    * Gráfico de barras por fold
+    * Boxplot de accuracy a través de folds
+
+[4.2] Página CrossValidation (pages/04_CrossValidation.py):
+  - Selector de número de folds (3-10)
+  - Selector de modelos
+  - Botón "Ejecutar Validación Cruzada"
+  - Resultados interactivos
+
+---------------------------------------------------------------------------
+FASE 5: STREAMLIT - HIPERPARÁMETROS
+---------------------------------------------------------------------------
+
+[5.1] Implementar módulo hyperparameter_tuning.py:
+  - GridSearchCV para XGBoost:
+    n_estimators: [50, 100, 200]
+    max_depth: [4, 6, 8, 10]
+    learning_rate: [0.01, 0.1, 0.3]
+    subsample: [0.6, 0.8, 1.0]
+    colsample_bytree: [0.6, 0.8, 1.0]
+
+  - GridSearchCV para Random Forest:
+    n_estimators: [50, 100, 200]
+    max_depth: [4, 6, 8, None]
+    min_samples_split: [2, 5, 10]
+
+  - Búsqueda para CNN (parámetros reducidos por tiempo):
+    learning_rate: [1e-3, 1e-4, 1e-5]
+    dropout_rate: [0.2, 0.3, 0.5]
+    batch_size: [8, 16]
+
+  - Resultados:
+    * Tabla: Parámetro | Valores Evaluados | Mejor Valor
+    * Mejores parámetros encontrados
+    * Heatmap de accuracy para combinaciones de parámetros
+
+[5.2] Página HyperparameterTuning (pages/05_HyperparameterTuning.py):
+  - Selector de modelo a tunear
+  - Grid de parámetros editable (multiselect de valores)
+  - Botón "Iniciar Búsqueda"
+  - Resultados interactivos con heatmaps
+
+---------------------------------------------------------------------------
+FASE 6: STREAMLIT - PRUEBAS ESTADÍSTICAS
+---------------------------------------------------------------------------
+
+[6.1] Implementar módulo statistical_tests.py:
+
+  Prueba de McNemar:
+    - Tabla de contingencia 2x2 para pares de modelos
+    - Estadístico chi-cuadrado
+    - p-valor
+    - Interpretación: "No hay diferencias significativas (p > 0.05)" o
+                     "Diferencias significativas (p < 0.05)"
+
+  Prueba de Wilcoxon Signed-Rank:
+    - Comparación no paramétrica de predicciones pareadas
+    - Estadístico W
+    - p-valor
+    - Interpretación textual
+
+  Tabla de comparaciones por pares:
+    Par de Modelos | McNemar p-valor | Wilcoxon p-valor | Significativo?
+    XGB vs RF      | 0.452           | 0.321            | No
+    XGB vs Ensemble| 0.023           | 0.018            | Sí
+    ...
+
+[6.2] Página StatisticalTests (pages/06_StatisticalTests.py):
+  - Selector de modelos a comparar (máximo todos)
+  - Botón "Ejecutar Pruebas"
+  - Tabla de resultados con color-coding
+  - Interpretación automática generarada
+
+---------------------------------------------------------------------------
+FASE 7: STREAMLIT - REPORTES
+---------------------------------------------------------------------------
+
+[7.1] Implementar módulo visualization.py:
+  - Generar matriz de confusión con seaborn + matplotlib
+  - Generar curva ROC (todos los modelos superpuestos)
+  - Generar heatmap de correlación
+  - Generar feature importance plot
+  - Generar comparativa de barras de métricas
+  - Guardar figuras en memoria (BytesIO) para insertar en reportes
+
+[7.2] Implementar módulo reports.py:
+
+  Reporte PDF (reportlab):
+    - Portada con título, fecha, versión
+    - Sección 1: Resumen del dataset (tablas + figuras)
+    - Sección 2: Resultados de entrenamiento (tabla comparativa)
+    - Sección 3: Matrices de confusión (una por modelo)
+    - Sección 4: Curvas ROC
+    - Sección 5: Validación cruzada (tabla por fold)
+    - Sección 6: Hiperparámetros (mejores configuraciones)
+    - Sección 7: Pruebas estadísticas
+    - Sección 8: Conclusiones y recomendaciones
+    - Cada sección incluye interpretación textual
+
+  Reporte Word (python-docx):
+    - Misma estructura que PDF
+    - Formato Word editable
+    - Tablas con estilo profesional
+    - Figuras insertadas
+
+  Reporte Excel (openpyxl):
+    - Hoja 1: Métricas por modelo
+    - Hoja 2: Resultados de validación cruzada
+    - Hoja 3: Mejores hiperparámetros
+    - Hoja 4: Pruebas estadísticas
+    - Con formato condicional (mejor valor resaltado en verde)
+
+[7.3] Página Reports (pages/07_Reports.py):
+  - Selector de qué incluir en el reporte (checkboxes)
+  - Selector de formato (PDF, Word, Excel, o todos)
+  - Botón "Generar Reporte" con spinner
+  - Vista previa del reporte (primeras páginas)
+  - Guardar en DRIVE_BASE /Resultados/
+  - Botones de descarga para cada formato
+
+---------------------------------------------------------------------------
+FASE 8: MEJORAS BACKEND FASTAPI
+---------------------------------------------------------------------------
+
+[8.1] Agregar autenticación JWT:
+  - Instalar python-jose + passlib + bcrypt
+  - Crear endpoint POST /auth/login
+  - Crear dependencia get_current_user (verificar token)
+  - Proteger endpoint /predict con autenticación opcional
+
+[8.2] Agregar endpoint /auth/register (opcional):
+  - Registrar nuevo usuario
+  - Almacenar en memoria o archivo JSON
+
+[8.3] Mejorar rate limiting:
+  - Diferentes límites para usuarios autenticados vs anónimos
+
+---------------------------------------------------------------------------
+FASE 9: MEJORAS FRONTEND REACT
+---------------------------------------------------------------------------
+
+[9.1] Crear componente Login.jsx:
+  - Formulario: usuario + contraseña
+  - Llamar a POST /auth/login
+  - Almacenar token JWT en localStorage
+  - Manejo de errores (credenciales inválidas)
+
+[9.2] Crear componente Dashboard.jsx:
+  - Ruta /dashboard protegida
+  - Mostrar KPIs:
+    * Total de diagnósticos realizados
+    * Accuracy global
+    * Últimos 10 diagnósticos con detalles
+    * Gráfico de distribución (BENIGN vs MALIGNANT)
+  - Refresh periódico
+
+[9.3] Actualizar App.jsx:
+  - Agregar contexto de autenticación (AuthContext)
+  - Proteger rutas con componente PrivateRoute
+  - Agregar menú de navegación: Inicio | Dashboard | Historial
+  - Botón de login/logout en Header
+
+[9.4] Actualizar Header.jsx:
+  - Mostrar nombre de usuario si autenticado
+  - Botón de logout
+  - Link a Dashboard
+
+[9.5] Agregar react-router-dom:
+  - Configurar rutas: /, /dashboard, /history
+  - Navegación SPA
+
+---------------------------------------------------------------------------
+FASE 10: DOCKER Y DESPLIEGUE
+---------------------------------------------------------------------------
+
+[10.1] Crear training/Dockerfile:
+  FROM python:3.10-slim
+  - Instalar dependencias del sistema (opencv, etc.)
+  - Copiar training/ y backend/CSVFiles/
+  - EXPOSE 8501
+  - CMD: streamlit run app.py
+
+[10.2] Actualizar docker-compose.yml:
+  - Agregar servicio training:
+    * build: ./training
+    * ports: 8501:8501
+    * volumes: ./backend/models:/app/models
+    * depends_on: backend
+    * env_file: ./training/.env
+
+[10.3] Crear frontend/vercel.json:
+  {
+    "rewrites": [{"source": "/(.*)", "destination": "/index.html"}],
+    "headers": [
+      {
+        "source": "/assets/(.*)",
+        "headers": [
+          { "key": "Cache-Control", "value": "public, max-age=31536000, immutable" }
+        ]
+      }
+    ]
+  }
+
+[10.4] Configurar Render (backend):
+  - Tipo: Docker
+  - Variables de entorno:
+    ENVIRONMENT=production
+    FRONTEND_URL=https://frontend.vercel.app
+    CNN_MODEL_PATH=/app/models/cnn_efficientnet_*.keras
+    ENSEMBLE_MODEL_PATH=/app/models/ensemble_*.keras
+    TABULAR_MODEL_PATH=/app/models/tabular_*.pkl
+  - Health check: /health
+  - Puerto: 8000
+
+[10.5] Configurar Vercel (frontend):
+  - Root directory: frontend
+  - Build: npm run build
+  - Output: dist
+  - Variables:
+    VITE_API_URL=https://backend.onrender.com
+
+[10.6] Configurar Render (training):
+  - Tipo: Docker
+  - Root directory: training
+  - Puerto: 8501
+  - Variables de entorno: credenciales admin
+
+---------------------------------------------------------------------------
+FASE 11: CI/CD CON GITHUB ACTIONS
+---------------------------------------------------------------------------
+
+[11.1] Crear .github/workflows/deploy.yml:
+  - Trigger: push a main
+  - Jobs:
+    1. lint:
+       - ruff (Python) + eslint (JS)
+    2. test:
+       - pytest (backend) + vitest (frontend)
+    3. build:
+       - Docker build backend y frontend
+       - Push a container registry
+    4. deploy:
+       - Deploy backend a Render (vía Render API)
+       - Deploy frontend a Vercel (vía Vercel CLI)
+       - Deploy training a Render
+
+---------------------------------------------------------------------------
+12. RESUMEN DE ARCHIVOS A CREAR
+---------------------------------------------------------------------------
+
+ARCHIVOS NUEVOS (23 archivos):
+
+  training/
+    app.py
+    config.py
+    requirements.txt
+    Dockerfile
+    .env.example
+    pages/__init__.py
+    pages/01_Dashboard.py
+    pages/02_EDA.py
+    pages/03_Training.py
+    pages/04_CrossValidation.py
+    pages/05_HyperparameterTuning.py
+    pages/06_StatisticalTests.py
+    pages/07_Reports.py
+    modules/__init__.py
+    modules/auth.py
+    modules/eda.py
+    modules/models.py
+    modules/cross_validation.py
+    modules/hyperparameter_tuning.py
+    modules/statistical_tests.py
+    modules/reports.py
+    modules/visualization.py
+    .streamlit/config.toml
+
+  frontend/
+    src/components/Login.jsx
+    src/components/Dashboard.jsx
+    vercel.json
+
+  .github/
+    workflows/deploy.yml
+
+ARCHIVOS A MODIFICAR (6 archivos):
+
+  backend/app/main.py           + /auth/login endpoint
+  backend/requirements.txt      + python-jose, passlib, bcrypt
+  frontend/src/App.jsx          + autenticación, routing, dashboard
+  frontend/src/components/Header.jsx  + login/logout, user info
+  frontend/package.json         + react-router-dom
+  docker-compose.yml            + servicio training
+
+===============================================================================
+13. TECNOLOGÍAS Y DEPENDENCIAS
+===============================================================================
+
+STREAMLIT TRAINING:
+  streamlit>=1.28
+  pandas>=2.0
+  numpy>=1.24
+  matplotlib>=3.7
+  seaborn>=0.12
+  plotly>=5.15
+  scikit-learn>=1.3
+  xgboost>=2.0
+  tensorflow>=2.13
+  opencv-python-headless>=4.8
+  Pillow>=10.0
+  reportlab>=4.0          (PDF)
+  python-docx>=1.0        (Word)
+  openpyxl>=3.1           (Excel)
+  joblib>=1.3
+  scipy>=1.11
+
+BACKEND (adicionales):
+  python-jose[cryptography]>=3.3  (JWT)
+  passlib[bcrypt]>=1.7           (hashing)
+  python-multipart>=0.0.6
+
+FRONTEND (adicionales):
+  react-router-dom>=6.20
+
+===============================================================================
+14. DIAGRAMA DE FLUJO DEL PIPELINE DE ENTRENAMIENTO
+===============================================================================
+
+```mermaid
+graph LR
+    START["Inicio"] --> AUTH["Login / Auth"]
+    AUTH --> DASH["Dashboard"]
+    DASH --> EDA["1. EDA"]
+    EDA --> TRAIN["2. Entrenamiento"]
+    TRAIN --> CV["3. Validación Cruzada"]
+    CV --> HP["4. Hiperparámetros"]
+    HP --> STAT["5. Pruebas Estadísticas"]
+    STAT --> REPORT["6. Reportes"]
+    REPORT --> SAVE["Guardar Mejor Modelo (.h5)"]
+    SAVE --> END["Fin"]
+
+    TRAIN --> |tabla comparativa| TRAIN_RES[Resultados]
+    CV --> |tabla por fold| CV_RES[Media + Std]
+    HP --> |mejores params| HP_RES[Config Óptima]
+    STAT --> |p-valores| STAT_RES[Interpretación]
+    REPORT --> |PDF/Word/Excel| REPORT_FILES[Descargar]
+```
+
+===============================================================================
+15. DIAGRAMA DE ESTADOS DE LA APLICACIÓN STREAMLIT
+===============================================================================
+
+```mermaid
+stateDiagram-v2
+    [*] --> not_authenticated: App inicia
+    
+    not_authenticated --> dashboard: Login exitoso
+    not_authenticated --> not_authenticated: Credenciales inválidas
+    
+    dashboard --> eda: Navegación
+    dashboard --> training: Navegación
+    dashboard --> cross_validation: Navegación
+    dashboard --> hyperparameter_tuning: Navegación
+    dashboard --> statistical_tests: Navegación
+    dashboard --> reports: Navegación
+    dashboard --> not_authenticated: Logout
+    
+    eda --> dashboard: Volver
+    training --> dashboard: Volver
+    cross_validation --> dashboard: Volver
+    hyperparameter_tuning --> dashboard: Volver
+    statistical_tests --> dashboard: Volver
+    reports --> dashboard: Volver
+    
+    state training {
+        [*] --> idle
+        idle --> training_progress: Iniciar
+        training_progress --> complete: Entrenamiento OK
+        training_progress --> error: Error
+        complete --> [*]
+        error --> [*]
+    }
+    
+    state cross_validation {
+        [*] --> cv_idle
+        cv_idle --> cv_running: Ejecutar
+        cv_running --> cv_complete: Completado
+        cv_complete --> [*]
+    }
+```
+
+===============================================================================
+FIN DEL PLAN
+===============================================================================

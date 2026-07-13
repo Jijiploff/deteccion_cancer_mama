@@ -1,120 +1,139 @@
-import { useCallback, useRef, useState } from 'react'
+import Spinner from './Spinner'
+import ConfidenceGauge from './ConfidenceGauge'
 
-const ACCEPTED_TYPES = ['image/jpeg', 'image/jpg', 'image/png']
-const MAX_SIZE_MB = 5
-
-export default function UploadPanel({ onFileSelected, previewUrl, isLoading, filename }) {
-  const [isDragging, setIsDragging] = useState(false)
-  const [localError, setLocalError] = useState(null)
-  const inputRef = useRef(null)
-
-  const validateAndSelect = useCallback(
-    (file) => {
-      if (!file) return
-      if (!ACCEPTED_TYPES.includes(file.type)) {
-        setLocalError('Formato no soportado. Usa JPG o PNG.')
-        return
-      }
-      if (file.size > MAX_SIZE_MB * 1024 * 1024) {
-        setLocalError(`El archivo supera el límite de ${MAX_SIZE_MB}MB.`)
-        return
-      }
-      setLocalError(null)
-      onFileSelected(file)
-    },
-    [onFileSelected]
-  )
-
-  const handleDrop = (event) => {
-    event.preventDefault()
-    setIsDragging(false)
-    const file = event.dataTransfer.files?.[0]
-    validateAndSelect(file)
+function ConsensusBadge({ consensus }) {
+  const styles = {
+    full_agreement: 'bg-benign/15 text-benign border-benign/30',
+    majority: 'bg-accent/15 text-accent border-accent/30',
+    disagreement: 'bg-malignant/15 text-malignant border-malignant/30',
   }
+  const labels = {
+    full_agreement: 'Consenso total',
+    majority: 'Mayoría',
+    disagreement: 'Sin consenso',
+  }
+  return (
+    <span className={`inline-block rounded-full border px-3 py-1 font-mono text-[11px] ${styles[consensus] || styles.disagreement}`}>
+      {labels[consensus] || consensus}
+    </span>
+  )
+}
 
+function StatusDot({ status }) {
+  const color = status === 'success' ? 'bg-benign' : status === 'error' ? 'bg-malignant' : 'bg-muted'
+  return <span className={`inline-block h-2 w-2 rounded-full ${color}`} />
+}
+
+export default function ResultPanel({ status, result, errorMessage, onRetry }) {
   return (
     <div className="flex flex-col gap-3">
-      <div className="flex items-center justify-between">
-        <h2 className="font-display text-sm font-semibold tracking-tight">
-          Visor de imagen
-        </h2>
-        {filename && (
-          <span className="truncate font-mono text-[11px] text-muted">{filename}</span>
-        )}
-      </div>
+      <h2 className="font-display text-sm font-semibold tracking-tight">
+        Resultado
+      </h2>
 
-      <label
-        htmlFor="mammography-upload"
-        onDragOver={(e) => {
-          e.preventDefault()
-          setIsDragging(true)
-        }}
-        onDragLeave={() => setIsDragging(false)}
-        onDrop={handleDrop}
-        className={`film-grain relative flex aspect-square w-full cursor-pointer flex-col items-center justify-center overflow-hidden rounded-xl border bg-[#0c1114] transition-shadow duration-200 ${
-          isDragging ? 'border-accent shadow-lightbox' : 'border-line'
-        }`}
-      >
-        {previewUrl ? (
-          <>
-            <img
-              src={previewUrl}
-              alt="Vista previa de la mamografía cargada"
-              className="h-full w-full object-contain"
-            />
-            {isLoading && (
-              <div
-                aria-hidden="true"
-                className="absolute inset-x-0 top-0 h-16 bg-gradient-to-b from-accent/25 to-transparent animate-scan"
-              />
-            )}
-          </>
-        ) : (
-          <div className="flex flex-col items-center gap-3 px-6 text-center">
-            <svg
-              viewBox="0 0 24 24"
-              fill="none"
-              className="h-8 w-8 text-accent/70"
-              aria-hidden="true"
-            >
-              <path
-                d="M12 16V4M12 4 7.5 8.5M12 4l4.5 4.5"
-                stroke="currentColor"
-                strokeWidth="1.6"
-                strokeLinecap="round"
-                strokeLinejoin="round"
-              />
-              <path
-                d="M4 16v2.5A1.5 1.5 0 0 0 5.5 20h13a1.5 1.5 0 0 0 1.5-1.5V16"
-                stroke="currentColor"
-                strokeWidth="1.6"
-                strokeLinecap="round"
-              />
-            </svg>
-            <p className="font-body text-sm text-neutral-300">
-              Arrastra la imagen aquí o
-              <span className="text-accent"> haz clic para seleccionarla</span>
-            </p>
-            <p className="font-mono text-[11px] text-neutral-500">
-              JPG o PNG · máx. {MAX_SIZE_MB}MB
+      <div className="flex min-h-[240px] flex-col rounded-xl border border-line bg-surface px-5 py-6">
+        {status === 'idle' && (
+          <div className="flex flex-1 items-center justify-center">
+            <p className="font-mono text-xs text-muted">
+              Sube una mamografía para obtener el análisis.
             </p>
           </div>
         )}
-        <input
-          ref={inputRef}
-          id="mammography-upload"
-          type="file"
-          accept="image/jpeg,image/png"
-          className="sr-only"
-          onChange={(e) => validateAndSelect(e.target.files?.[0])}
-        />
-      </label>
 
-      {localError && (
-        <p role="alert" className="font-mono text-[12px] text-malignant">
-          {localError}
-        </p>
-      )}
+        {status === 'loading' && (
+          <div className="flex flex-1 items-center justify-center">
+            <Spinner label="Analizando imagen…" />
+          </div>
+        )}
+
+        {status === 'success' && result && (
+          <div className="flex w-full flex-col gap-5">
+            <div className="flex items-center justify-between">
+              <span
+                className={`inline-block rounded-full px-4 py-1.5 font-display text-[15px] font-semibold tracking-tight ${
+                  result.label === 'BENIGN'
+                    ? 'bg-benign/15 text-benign'
+                    : 'bg-malignant/15 text-malignant'
+                }`}
+              >
+                {result.label === 'BENIGN' ? 'BENIGNO' : 'MALIGNO'}
+              </span>
+              <ConsensusBadge consensus={result.consensus} />
+            </div>
+
+            <ConfidenceGauge
+              benign={result.probabilities.benign}
+              malignant={result.probabilities.malignant}
+            />
+
+            {result.warning && (
+              <p
+                role="alert"
+                className="rounded-lg border border-malignant/30 bg-malignant/5 px-3 py-2 font-mono text-[12px] text-malignant"
+              >
+                {result.warning}
+              </p>
+            )}
+
+            <div className="overflow-x-auto">
+              <table className="w-full border-collapse font-mono text-[11px]">
+                <thead>
+                  <tr className="border-b border-line text-left text-muted">
+                    <th className="pb-2 pr-3 font-medium">Modelo</th>
+                    <th className="pb-2 pr-3 font-medium">Diagnóstico</th>
+                    <th className="pb-2 pr-3 font-medium">Confianza</th>
+                    <th className="pb-2 pr-3 font-medium">Tiempo</th>
+                    <th className="pb-2 font-medium">Estado</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {result.models.map((m, i) => (
+                    <tr key={i} className="border-b border-line/50">
+                      <td className="py-2.5 pr-3 text-ink">{m.model_name}</td>
+                      <td className="py-2.5 pr-3">
+                        <span className={m.model_label === 'MALIGNANT' ? 'text-malignant font-semibold' : 'text-benign font-semibold'}>
+                          {m.model_label === 'BENIGN' ? 'Benigno' : 'Maligno'}
+                        </span>
+                      </td>
+                      <td className="py-2.5 pr-3 text-ink">
+                        {(m.confidence * 100).toFixed(1)}%
+                      </td>
+                      <td className="py-2.5 pr-3 text-muted">
+                        {m.processing_time_ms.toFixed(0)} ms
+                      </td>
+                      <td className="py-2.5">
+                        <StatusDot status={m.status} />
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+
+            <p className="font-mono text-[11px] text-muted">
+              Procesado en {result.processing_time_ms.toFixed(1)} ms
+            </p>
+          </div>
+        )}
+
+        {status === 'error' && (
+          <div className="flex flex-1 flex-col items-center justify-center gap-4">
+            <p
+              role="alert"
+              className="font-mono text-[13px] text-malignant"
+            >
+              {errorMessage || 'Error al procesar la imagen.'}
+            </p>
+            <button
+              type="button"
+              onClick={onRetry}
+              className="rounded-lg border border-line px-4 py-2 font-mono text-xs text-ink transition-colors hover:border-accent hover:text-accent"
+            >
+              Reintentar
+            </button>
+          </div>
+        )}
+      </div>
     </div>
   )
 }

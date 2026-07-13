@@ -1,0 +1,99 @@
+import streamlit as st
+import pandas as pd
+from pathlib import Path
+
+from config import (
+    DATA_DIR, IMAGES_DIR, TABULAR_DIR, MODELS_DIR,
+    RESULTS_DIR, FALLBACK_MODELS_DIR, DRIVE_BASE,
+)
+
+st.title("📊 Dashboard del Sistema")
+st.markdown("Bienvenido al panel de control del sistema de detección de cáncer de mama.")
+
+drive_available = Path(DRIVE_BASE).exists()
+st.info(
+    f"**Ruta base:** `{DRIVE_BASE}`  \n"
+    f"{'✅ Google Drive detectado' if drive_available else '⚠️ Google Drive no montado'}"
+    if not drive_available else
+    f"**Ruta base:** `{DRIVE_BASE}`  \n✅ Google Drive montado correctamente"
+)
+
+col1, col2, col3, col4 = st.columns(4)
+
+csv_files = list(DATA_DIR.glob("*.csv")) if DATA_DIR.exists() else []
+total_csv = len(csv_files)
+col1.metric("Archivos CSV", total_csv)
+
+model_dirs = [MODELS_DIR, FALLBACK_MODELS_DIR]
+model_count = 0
+for md in model_dirs:
+    if md.exists():
+        model_count += sum(1 for f in md.glob("*") if f.suffix in (".keras", ".h5", ".pkl"))
+col2.metric("Modelos Entrenados", model_count)
+
+if TABULAR_DIR.exists():
+    wis_path = TABULAR_DIR / "data.csv"
+    if wis_path.exists():
+        df = pd.read_csv(wis_path)
+        total_cases = len(df)
+        malignant = int((df["diagnosis"] == "M").sum()) if "diagnosis" in df.columns else 0
+        benign = total_cases - malignant
+        col3.metric("Casos Wisconsin", total_cases)
+        col4.metric("Malignos / Benignos", f"{malignant} / {benign}")
+    else:
+        col3.metric("Casos Wisconsin", "N/A")
+        col4.metric("Malignos / Benignos", "N/A")
+else:
+    col3.metric("Casos Wisconsin", "Sin datos")
+    col4.metric("Malignos / Benignos", "Sin datos")
+
+st.markdown("---")
+st.subheader("📁 Archivos de Datos (CSV)")
+
+tab1, tab2 = st.tabs(["📂 Google Drive", "📂 Local (backend/CSVFiles)"])
+
+with tab1:
+    if DATA_DIR.exists():
+        data = []
+        for f in csv_files:
+            size_kb = f.stat().st_size / 1024
+            data.append({"Archivo": f.name, "Tamaño (KB)": f"{size_kb:.1f}"})
+        st.dataframe(pd.DataFrame(data), use_container_width=True)
+    else:
+        st.warning(f"Ruta no encontrada: `{DATA_DIR}`")
+
+with tab2:
+    local_dir = FALLBACK_MODELS_DIR.parent / "CSVFiles"
+    if local_dir.exists():
+        data = []
+        for f in local_dir.glob("*.csv"):
+            size_kb = f.stat().st_size / 1024
+            data.append({"Archivo": f.name, "Tamaño (KB)": f"{size_kb:.1f}"})
+        st.dataframe(pd.DataFrame(data), use_container_width=True)
+    else:
+        st.warning(f"Ruta no encontrada: `{local_dir}`")
+
+st.subheader("📦 Modelos Entrenados")
+for label, md in [("Google Drive", MODELS_DIR), ("Local backend/models", FALLBACK_MODELS_DIR)]:
+    if md.exists():
+        data = []
+        for f in md.glob("*"):
+            if f.suffix in (".keras", ".h5", ".pkl"):
+                size_mb = f.stat().st_size / (1024 * 1024)
+                data.append({"Ubicación": label, "Modelo": f.name, "Tamaño (MB)": f"{size_mb:.2f}"})
+        if data:
+            st.dataframe(pd.DataFrame(data), use_container_width=True)
+
+st.markdown("---")
+st.subheader("🚀 Flujo de Trabajo Recomendado")
+st.markdown(
+    """
+1. **📋 EDA** → Explora y visualiza los datasets
+2. **🧠 Entrenamiento** → Entrena modelos clásicos (XGBoost, Random Forest)  
+   *(Para CNN/Ensemble pesado, usa Google Colab con GPU)*
+3. **🔁 Validación Cruzada** → Evalúa robustez con K-Fold
+4. **⚙️ Hiperparámetros** → Encuentra la mejor configuración
+5. **📈 Pruebas Estadísticas** → McNemar, Wilcoxon entre modelos
+6. **📑 Reportes** → Genera PDF, Word, Excel con resultados
+"""
+)

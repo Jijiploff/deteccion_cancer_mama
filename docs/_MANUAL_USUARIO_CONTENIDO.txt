@@ -1,0 +1,205 @@
+Manual de Usuario: Sistema 
+Diagnóstico automatizado de cáncer de mama mediante aprendizaje automático: Desarrollo y evaluación comparativa
+Introducción: 
+Este manual brinda instrucciones detalladas para la utilización del sistema de diagnóstico de cáncer de mama basado en algoritmos de aprendizaje automático, tales como 
+XGboost
+ y Redes Neuronales. El sistema está diseñado para funcionar en Google 
+Colab
+ (Conexiones, entrenamiento de modelos, generación de reportes en PDF en base a estadísticas) y 
+Streamlit
+ (interfaz de escritorio y móvil) y 
+evalúa
+ modelos como 
+XGBoost
+ (tabular), RNN basados en 
+EfficientNet
+, 
+así
+ como dos arqu
+itecturas híbridas.
+Características principales
+Preprocesamiento de imágenes: 
+Segmentación por bordes, normalización CLAHE y aumentos
+Modelos híbridos personalizados: 
+CNN desarrolladas desde cero y combinadas con técnicas de visión computacional
+Métricas generadas: 
+Precisión, matriz de confusión, curvas ROC, coeficiente de Matthews, pruebas de 
+McNemar
+ y reportes.
+Generación de reportes: 
+Exportación automática de resultados en PDF con gráficos y análisis estadístico.
+Requisitos del Sistema
+Hardware y Software
+Componente
+Requisito Mínimo
+Dispositivo
+PC o laptop con acceso a navegador web
+Sistema operativo
+Windows, macOS o Linux
+Navegador
+Google Chrome, Edge, entre otros
+Conexión 
+a
+ internet
+Obligatoria
+ 
+para
+-Google 
+Colab
+Dependencias
+El sistema requiere las siguientes dependencias para su entrenamiento: 
+!pip
+ install 
+tensorflow
+ 
+opencv
+-python scikit-learn pandas 
+numpy
+ matplotlib seaborn 
+plotly
+ 
+tqdm
+ pillow
+Guía Paso a Paso
+Entrenamiento en Google 
+Colab
+Acceso 
+al notebook y conexión a Drive: 
+Abrir el notebook en Google 
+Colab
+Ejecutar la primera celda para montar Google Drive
+Verificar que las siguientes rutas 
+existan:
+/
+content
+/drive/
+MyDrive
+/
+DataSet
+/
+├── 
+BreastCancer_Images
+/
+jpeg
+/
+├── 
+CSVFiles
+/
+├── 
+BreastCancer_Tabular
+/
+Ejecución del 
+Análisis Exploratorio: 
+Ejecutar la celda del sistema 
+BreastCancerEDA
+(
+) para verificar la estructura, cargar los datasets, analizar patologías y generar reportes.
+Al finalizar, se guardará un resumen en la siguiente ruta: 
+/content/drive/
+MyDrive
+/
+DataSet
+/
+Resultados
+/exploratory_report.txt
+Entrenamiento de modelos híbridos (C
+NN)
+Una vez terminado el análisis, ejecutar la celda de entrenamiento principal
+Luego, ejecutar la celda del Modelo híbrido 1 y Modelo 
+híbirdo
+ 2 posteriormente
+Descarga de Resultados
+Los modelos entrenados, así como los reportes en pdf se guardarán en la siguiente ruta:
+ 
+/
+content
+/drive/
+MyDrive
+/
+DataSet
+/Resultados/
+Interfaz Móvil con 
+Streamlit
+Ejecutar la Aplicación
+Los modelos ya se 
+encuntran
+ en la carpeta /
+models
+. 
+En una celda adicional ejecutar: 
+streamlit
+ run app.py
+Se generará una URL local para la aplicación en escritorio. Para móviles el link es el siguiente: 
+https://xdddaaaaa.streamlit.app/
+Uso de la App: 
+Subir una imagen (mamografía) en formato 
+jpg
+ o png
+.
+El sistema preprocesa la imagen (CLAHE + 
+segmentación).
+Ingresar datos clínicos del paciente. 
+Se puede seleccionar dos opciones: Procesamiento por imágenes o por archivo .
+csv
+Realizar diagnóstico y generación de reporte PDF con “Descargar Reporte”
+Explicación de Resultados
+Métricas clave
+Precisión: 
+Proporción de predicciones correctas
+Matriz de confusión: 
+Evalúa VP, VN, FP, FN para cada clase
+AUC – ROC: 
+Área bajo la curva ROC
+Coeficiente de Matthews: 
+Medida robusta para problemas multiclase
+Prueba de 
+McNemar
+: 
+Compara pares de modelos (ρ
+ 
+<
+ 
+0.05 indica diferencias significativas)
+Gráficos Generados
+: 
+Mapas de Calor: 
+Muestra la clasificación e influencia de los datos durante el entrenamiento del modelo
+Solución de Problemas
+Error
+Solución
+No se encuentra carpeta 
+Dataset
+Verificar que la ruta esté montada en Google Drive
+Imágenes no cargan correctamente
+Asegurar que todas las imágenes sean .
+jpg
+/.png y estén dentro de subcarpetas
+Modelo sin entrenar
+Verificar que se ejecutaron las celdas previas antes de entrenar
+Ejemplo de Reporte PDF
+El reporte incluye: 
+Portada
+Análisis de datasets: 
+Gráficos de pastel, 
+g
+ráficos de barras, 
+t
+abla resumen
+Análisis BI-RADS: 
+Gráficos de pastel, gráficos de barras, tabla resumen, mapas de calor.
+Análisis SUBTLETY: 
+Gráficos de pastel, gráficos de barras, tabla resumen.
+Análisis detallado de cada modelo
+Modelo Tabular: 
+Gráfico de barras, matriz de confusión
+Modelo CNN-
+EfficientNet
+: 
+Gráfico de barras, matriz de confusión
+Modelo Ensemble: 
+Gráfico de barras, matriz de confusión
+. 
+Conclusiones y Recomendaciones
+Repositorio
+:
+https://colab.research.google.com/drive/1a8lgGwGdo-DqOZ8qabIfsET0lKssQyNv#scrollTo=lnaCXz1JNGHl

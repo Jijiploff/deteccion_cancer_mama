@@ -1,0 +1,331 @@
+===============================================================================
+ MANUAL DE DESPLIEGUE - SISTEMA DETECCIÓN DE CÁNCER DE MAMA
+===============================================================================
+
+Versión: 1.0
+Fecha: Julio 2026
+
+===============================================================================
+1. ARQUITECTURA DEL SISTEMA
+===============================================================================
+
+El sistema consta de 4 componentes principales:
+
+  [Frontend React]           → Vercel (producción)
+  [Backend FastAPI]          → Render (producción)
+  [Streamlit Dashboard]      → Render / Local
+  [Colab Notebook]           → Google Colab (entrenamiento pesado)
+
+Flujo de datos:
+  Colab (GPU) → entrena modelos → guarda en Google Drive
+  Streamlit   → lee datos de Drive → EDA / entrenamiento ligero / reportes
+  FastAPI     → carga modelo .h5/.pkl → sirve predicciones
+  React       → consume API de FastAPI → muestra resultados
+
+===============================================================================
+2. REQUISITOS DEL SISTEMA
+===============================================================================
+
+2.1 Hardware
+  - CPU: Dual-core 2.0 GHz (mínimo) / Quad-core 3.0 GHz+ (recomendado)
+  - RAM: 4 GB (mínimo) / 8 GB+ (recomendado)
+  - Disco: 10 GB libres (mínimo) / 20 GB+ SSD (recomendado)
+  - GPU: No requerida para inferencia / NVIDIA GTX 1060+ para entrenamiento
+
+2.2 Software
+  - Docker 24+ y Docker Compose 2.20+ (recomendado)
+  - Python 3.10+
+  - Node.js 20+
+  - Git 2.40+
+
+2.3 Cuentas Cloud
+  - GitHub (control de versiones)
+  - Render.com (backend y training)
+  - Vercel.com (frontend)
+  - Google Drive (datasets y modelos)
+
+===============================================================================
+3. DESPLIEGUE LOCAL CON DOCKER
+===============================================================================
+
+3.1 Clonar el repositorio
+
+  git clone https://github.com/tu-usuario/deteccion_cancer_mama.git
+  cd deteccion_cancer_mama
+
+3.2 Agregar el modelo entrenado
+
+  Coloca el archivo .keras o .h5 en:
+    backend/models/
+
+  Opcionalmente, desde Google Drive descarga de:
+    /content/drive/MyDrive/DataSet/Models/
+
+3.3 Configurar variables de entorno
+
+  Opcional: editar las variables en docker-compose.yml o crear .env en backend/.
+
+  Variables principales:
+    FRONTEND_URL=http://localhost:3000
+    ENVIRONMENT=development
+    CNN_MODEL_PATH=/app/models/cnn_efficientnet_*.keras
+    ADMIN_USERNAME=admin
+    ADMIN_PASSWORD=cancer_mama_2024
+
+3.4 Construir y ejecutar
+
+  docker-compose up --build
+
+  Esto inicia 3 servicios:
+  - Frontend:     http://localhost:3000
+  - Backend API:  http://localhost:8000
+  - Swagger Docs: http://localhost:8000/docs
+  - Training:     http://localhost:8501
+
+  Credenciales Streamlit: admin / cancer_mama_2024
+
+3.5 Detener servicios
+
+  docker-compose down
+
+===============================================================================
+4. DESPLIEGUE LOCAL MANUAL (SIN DOCKER)
+===============================================================================
+
+4.1 Backend (FastAPI)
+
+  cd backend
+  python -m venv venv
+
+  # Windows:
+  venv\Scripts\activate
+  # Linux/Mac:
+  source venv/bin/activate
+
+  pip install -r requirements.txt
+  uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload
+
+  El backend estará en http://localhost:8000
+
+4.2 Frontend (React + Vite)
+
+  cd frontend
+  npm install
+  npm run dev
+
+  El frontend estará en http://localhost:5173
+
+  Variable de entorno (frontend/.env):
+    VITE_API_URL=http://localhost:8000
+
+4.3 Training Dashboard (Streamlit)
+
+  cd training
+  pip install -r requirements.txt
+  streamlit run app.py
+
+  Credenciales por defecto:
+    Usuario: admin
+    Contraseña: cancer_mama_2024
+
+  NOTA: Para usar con Google Drive, tener Drive montado localmente
+  (Google Drive for Desktop) o modificar DRIVE_BASE en training/config.py.
+
+===============================================================================
+5. DESPLIEGUE EN PRODUCCIÓN - RENDER (BACKEND)
+===============================================================================
+
+5.1 Crear servicio Web en Render
+
+  1. Ir a https://dashboard.render.com
+  2. New + → Web Service
+  3. Conectar repositorio de GitHub
+  4. Configurar:
+     - Name: cancer-mama-backend
+     - Root Directory: backend
+     - Runtime: Docker
+     - Build Command: (vacío)
+     - Start Command: (vacío)
+     - Port: 8000
+
+5.2 Variables de entorno en Render
+
+  ENVIRONMENT=production
+  FRONTEND_URL=https://tudominio.vercel.app
+  CNN_MODEL_PATH=/app/models/cnn_efficientnet_*.keras
+  ENSEMBLE_MODEL_PATH=/app/models/ensemble_*.keras
+  TABULAR_MODEL_PATH=/app/models/tabular_*.pkl
+  WISCONSIN_CSV_PATH=/app/CSVFiles/data.csv
+  JWT_SECRET_KEY=<generar clave segura>
+  JWT_EXPIRE_MINUTES=60
+  ADMIN_USERNAME=admin
+  ADMIN_PASSWORD=<contraseña segura>
+  RATE_LIMIT_PREDICT=10/minute
+  RATE_LIMIT_DEFAULT=60/minute
+  PREDICTION_THRESHOLD=0.5
+
+5.3 Subir modelos entrenados
+
+  Opción A: Subir manualmente los archivos .keras y .pkl a la carpeta
+            models/ mediante Render Shell o Dashboard.
+
+  Opción B: Usar un bucket S3 o CDN y referenciar las rutas en las
+            variables de entorno.
+
+5.4 Verificar despliegue
+
+  https://tudominio.onrender.com/health
+  https://tudominio.onrender.com/docs
+
+===============================================================================
+6. DESPLIEGUE EN PRODUCCIÓN - VERCEL (FRONTEND)
+===============================================================================
+
+6.1 Importar proyecto
+
+  1. Ir a https://vercel.com
+  2. Add New → Project
+  3. Importar repositorio de GitHub
+  4. Configurar:
+     - Root Directory: frontend
+     - Framework Preset: Vite
+     - Build Command: npm run build
+     - Output Directory: dist
+
+6.2 Variables de entorno en Vercel
+
+  VITE_API_URL=https://tudominio.onrender.com
+
+6.3 Desplegar
+
+  Vercel despliega automáticamente al hacer push a main.
+  También se puede hacer deploy manual desde el dashboard.
+
+6.4 Verificar despliegue
+
+  https://tudominio.vercel.app
+
+  El frontend debe conectar con el backend y mostrar el health check.
+
+===============================================================================
+7. DESPLIEGUE DE STREAMLIT (TRAINING DASHBOARD)
+===============================================================================
+
+7.1 Opción A: Render
+
+  1. New + → Web Service
+  2. Configurar:
+     - Name: cancer-mama-training
+     - Root Directory: training
+     - Runtime: Docker
+     - Port: 8501
+
+  3. Variables de entorno:
+     ADMIN_USERNAME=admin
+     ADMIN_PASSWORD=<contraseña>
+     DRIVE_BASE=/content/drive/MyDrive/DataSet
+     RANDOM_STATE=42
+     TEST_SIZE=0.2
+
+  NOTA: En Render, Google Drive no está montado. Los datos deben
+  subirse manualmente al contenedor o usar un volumen persistente.
+
+7.2 Opción B: Streamlit Community Cloud
+
+  1. Ir a https://share.streamlit.io
+  2. Conectar repositorio de GitHub
+  3. Configurar:
+     - Main file: training/app.py
+     - Python version: 3.10
+
+  4. Agregar secrets en la configuración de la app:
+     ADMIN_USERNAME = "admin"
+     ADMIN_PASSWORD = "contraseña"
+     DRIVE_BASE = "ruta/a/datos"
+
+===============================================================================
+8. ENTRENAMIENTO CON GOOGLE COLAB
+===============================================================================
+
+8.1 Preparar dataset en Google Drive
+
+  Crear la siguiente estructura en /content/drive/MyDrive/DataSet/:
+
+    DataSet/
+    ├── CSVFiles/
+    │   ├── calc_case_description_train_set.csv
+    │   ├── calc_case_description_test_set.csv
+    │   ├── mass_case_description_train_set.csv
+    │   ├── mass_case_description_test_set.csv
+    │   ├── meta.csv
+    │   └── dicom_info.csv
+    ├── BreastCancer_Images/jpeg/
+    ├── BreastCancer_Tabular/
+    │   └── data.csv
+    ├── Database/
+    ├── Models/
+    └── Resultados/
+
+8.2 Ejecutar notebook
+
+  1. Abrir https://colab.research.google.com/
+  2. Subir docs/cancer_de_mama_is.py o copiar el contenido
+  3. Ejecutar celdas en orden:
+     a. Montar Google Drive
+     b. Instalar dependencias
+     c. EDA (BreastCancerEDA)
+     d. Entrenamiento (BreastCancerDetectionSystem)
+     e. Cross-validation
+     f. Feature importance
+
+8.3 Obtener modelos entrenados
+
+  Los modelos se guardan en:
+    /content/drive/MyDrive/DataSet/Models/
+    /content/drive/MyDrive/DataSet/Resultados/
+
+  Descargar y copiar a:
+    backend/models/
+
+===============================================================================
+9. PIPELINE CI/CD (GITHUB ACTIONS)
+===============================================================================
+
+9.1 Configurar secrets en GitHub
+
+  Settings → Secrets and variables → Actions:
+
+  - RENDER_API_KEY:      API key de Render
+  - RENDER_BACKEND_SERVICE_ID: ID del servicio backend en Render
+  - VERCEL_TOKEN:        Token de Vercel
+  - VERCEL_ORG_ID:       ID de organización en Vercel
+  - VERCEL_PROJECT_ID:   ID del proyecto en Vercel
+
+9.2 Flujo CI/CD
+
+  Al hacer push a main:
+
+  1. Lint (ruff Python + eslint JavaScript)
+  2. Test (imports backend + build frontend)
+  3. Deploy backend a Render (automático)
+  4. Deploy frontend a Vercel (automático)
+
+===============================================================================
+10. SOLUCIÓN DE PROBLEMAS COMUNES
+===============================================================================
+
+  Problema                           | Solución
+  -----------------------------------|------------------------------------------
+  Backend no inicia (puerto 8000)    | Cambiar puerto en docker-compose.yml
+  Modelo no encontrado               | Verificar backend/models/ existe
+  Error de conexión a Drive          | Montar Drive o verificar ruta
+  Frontend no conecta con backend    | Verificar VITE_API_URL y CORS
+  Imagen no cargada                  | Usar JPG/PNG, máximo 5MB
+  Error "Model not found"            | Copiar modelo .keras a backend/models/
+  Streamlit no arranca               | Verificar requirements.txt instalado
+  GPU no detectada en Colab          | Activar GPU: Entorno de ejecución →
+                                        Cambiar tipo de entorno de ejecución
+
+===============================================================================
+FIN DEL MANUAL DE DESPLIEGUE
+===============================================================================

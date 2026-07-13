@@ -1,5 +1,4 @@
-// URL del backend. En Vercel, define VITE_API_URL en las variables de entorno del proyecto.
-const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:8000'
+export const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:8000'
 
 class ApiError extends Error {
   constructor(message, status) {
@@ -27,9 +26,21 @@ export async function checkHealth() {
   return handleResponse(response)
 }
 
-export async function predictImage(file) {
+export async function predictImage(file, clinicalData = {}, wisconsinData = {}) {
   const formData = new FormData()
   formData.append('file', file)
+
+  for (const [key, value] of Object.entries(clinicalData)) {
+    if (value !== null && value !== undefined && value !== '') {
+      formData.append(key, String(value))
+    }
+  }
+
+  for (const [key, value] of Object.entries(wisconsinData)) {
+    if (value !== null && value !== undefined && value !== '') {
+      formData.append(key, String(value))
+    }
+  }
 
   const response = await fetch(`${API_URL}/predict`, {
     method: 'POST',

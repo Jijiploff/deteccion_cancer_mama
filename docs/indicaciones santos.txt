@@ -1,0 +1,27 @@
+Agrega modelos
+Reset Net ejemplo
+M1
+M2
+M3
+M1+M2
+M2+M3
+
+Debemos preguntar a la herramienta agentica cuales son los modelos más usados para cancer de mama y en base a ello actualizar, porque el que nos dio de base puede estar desafasado, revisar ello o tambien para el procesamiento de imágenes y documentarlo. y va a preguntar cuales son los modelos más usado y fundamentar (¿siguiente curso)
+
+
+en el entrenamiento debemos usar 20 - 80 o 25-75 validar-entrenar    y esos tienen indicadores a través de la matriz de confusion F1 (Exactitud, precision, etc), nivel de correlacion
+
+con el mejor H?
+mejor modelo entrenado idk
+te va a generar un h
+y con ese modelo vas a diagnosticar, el entrenamiento puede ser horas o media hora o dias, si vuelve a correr va a salir lo mismo en teoria, y ese modelo se tiene fijo para las validaciones
+las validaciones se hacen a traves de validacion cruzadas y usar 5 folks) 
+
+determinación de los hiperparametros (tuneo) (parametro del mejor modelo para ajustarlo)
+
+
+PASOS (EDA) validación
+
+consistencia de datos
+fast api
+streamlit y python

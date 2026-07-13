@@ -7,6 +7,7 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     libsm6 \
     libxext6 \
     libxrender1 \
+    libgomp1 \
     && rm -rf /var/lib/apt/lists/*
 
 WORKDIR /app
@@ -15,9 +16,10 @@ WORKDIR /app
 COPY requirements.txt .
 RUN pip install --no-cache-dir -r requirements.txt
 
-# Copiar el código de la app y el modelo entrenado
+# Copiar el código de la app, modelos y datos de referencia
 COPY app/ ./app/
 COPY models/ ./models/
+COPY CSVFiles/ ./CSVFiles/
 
 # Render inyecta la variable de entorno PORT; exponemos 8000 como referencia local
 EXPOSE 8000

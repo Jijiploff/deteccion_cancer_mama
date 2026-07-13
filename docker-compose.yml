@@ -1,5 +1,3 @@
-version: "3.9"
-
 services:
   backend:
     build:
@@ -9,7 +7,10 @@ services:
     ports:
       - "8000:8000"
     environment:
-      MODEL_PATH: /app/models/modelo_cancer_mama.keras
+      CNN_MODEL_PATH: /app/models/cnn_efficientnet_20260707_061411.keras
+      ENSEMBLE_MODEL_PATH: /app/models/ensemble_20260707_061411.keras
+      TABULAR_MODEL_PATH: /app/models/tabular_20260707_061411.pkl
+      WISCONSIN_CSV_PATH: /app/CSVFiles/data.csv
       FRONTEND_URL: http://localhost:3000
       ENVIRONMENT: development
       LOG_LEVEL: INFO
@@ -44,7 +45,31 @@ services:
     ports:
       - "3000:80"
     depends_on:
-      - backend
+      backend:
+        condition: service_healthy
+    restart: unless-stopped
+    networks:
+      - cancer-mama-net
+
+  training:
+    build:
+      context: ./training
+      dockerfile: Dockerfile
+    container_name: cancer-mama-training
+    ports:
+      - "8501:8501"
+    environment:
+      ADMIN_USERNAME: admin
+      ADMIN_PASSWORD: cancer_mama_2024
+      DRIVE_BASE: /content/drive/MyDrive/DataSet
+      TRAINING_MODELS_DIR: /app/models
+      TRAINING_RESULTS_DIR: /app/results
+    volumes:
+      - ./backend/models:/app/models
+      - ./training/results:/app/results
+    depends_on:
+      backend:
+        condition: service_healthy
     restart: unless-stopped
     networks:
       - cancer-mama-net
