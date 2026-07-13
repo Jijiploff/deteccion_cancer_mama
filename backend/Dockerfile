@@ -18,7 +18,7 @@ RUN pip install --no-cache-dir -r requirements.txt
 
 # Copiar el código de la app, modelos y datos de referencia
 COPY app/ ./app/
-COPY models/ ./models/
+#COPY models/ ./models/
 COPY CSVFiles/ ./CSVFiles/
 
 # Descargar modelos desde Google Drive si se proporcionaron FILE_ID como build args
