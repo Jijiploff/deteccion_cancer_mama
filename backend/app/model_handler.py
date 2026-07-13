@@ -8,6 +8,7 @@ import numpy as np
 from PIL import Image
 
 from app.config import settings
+from app.download_models import download_model
 
 logger = logging.getLogger("model_handler")
 
@@ -56,8 +57,17 @@ class ModelHandler:
         return joblib.load(settings.TABULAR_MODEL_PATH)
 
     def load(self):
-        for name, loader in [("CNN", self._load_cnn), ("Ensemble", self._load_ensemble), ("XGBoost", self._load_tabular)]:
+        models_config = [
+            ("CNN", self._load_cnn, settings.CNN_MODEL_FILE_ID, settings.CNN_MODEL_PATH),
+            ("Ensemble", self._load_ensemble, settings.ENSEMBLE_MODEL_FILE_ID, settings.ENSEMBLE_MODEL_PATH),
+            ("XGBoost", self._load_tabular, settings.TABULAR_MODEL_FILE_ID, settings.TABULAR_MODEL_PATH),
+        ]
+        for name, loader, file_id, output_path in models_config:
             try:
+                if file_id:
+                    download_model(file_id, output_path, name)
+                else:
+                    logger.info(f"Sin FILE_ID para {name}, usando archivo local: {output_path}")
                 self._models[name] = loader()
                 self._model_status[name] = "loaded"
                 self._load_errors[name] = None

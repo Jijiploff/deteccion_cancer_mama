@@ -15,6 +15,10 @@ class Settings:
     TABULAR_MODEL_PATH: str = os.getenv("TABULAR_MODEL_PATH", str(BASE_DIR / "models" / "tabular_20260707_061411.pkl"))
     WISCONSIN_CSV_PATH: str = os.getenv("WISCONSIN_CSV_PATH", str(BASE_DIR / "CSVFiles" / "data.csv"))
 
+    CNN_MODEL_FILE_ID: str = os.getenv("CNN_MODEL_FILE_ID", "")
+    ENSEMBLE_MODEL_FILE_ID: str = os.getenv("ENSEMBLE_MODEL_FILE_ID", "")
+    TABULAR_MODEL_FILE_ID: str = os.getenv("TABULAR_MODEL_FILE_ID", "")
+
     IMG_SIZE: tuple = (224, 224)
     APPLY_CLAHE: bool = os.getenv("APPLY_CLAHE", "true").lower() == "true"
     CLASS_NAMES: list = ["BENIGN", "MALIGNANT"]

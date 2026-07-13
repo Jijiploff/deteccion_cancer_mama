@@ -21,6 +21,16 @@ COPY app/ ./app/
 COPY models/ ./models/
 COPY CSVFiles/ ./CSVFiles/
 
+# Descargar modelos desde Google Drive si se proporcionaron FILE_ID como build args
+# Usa: docker build --build-arg CNN_MODEL_FILE_ID=... ...
+ARG CNN_MODEL_FILE_ID
+ARG ENSEMBLE_MODEL_FILE_ID
+ARG TABULAR_MODEL_FILE_ID
+ENV CNN_MODEL_FILE_ID=$CNN_MODEL_FILE_ID \
+    ENSEMBLE_MODEL_FILE_ID=$ENSEMBLE_MODEL_FILE_ID \
+    TABULAR_MODEL_FILE_ID=$TABULAR_MODEL_FILE_ID
+RUN python -m app.download_models || echo "Descarga opcional omitida (sin FILE_IDs)"
+
 # Render inyecta la variable de entorno PORT; exponemos 8000 como referencia local
 EXPOSE 8000
 
