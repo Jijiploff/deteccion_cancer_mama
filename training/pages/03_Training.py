@@ -66,20 +66,20 @@ rf_params = {}
 
 with st.expander("Parámetros - XGBoost", expanded="XGBoost" in models_to_train):
     col1, col2, col3 = st.columns(3)
-    xgb_params["n_estimators"] = col1.number_input("n_estimators", 10, 500, 100, step=10)
-    xgb_params["max_depth"] = col2.number_input("max_depth", 2, 20, 6)
-    xgb_params["learning_rate"] = col3.select_slider("learning_rate", [0.001, 0.01, 0.05, 0.1, 0.2, 0.3], 0.1)
+    xgb_params["n_estimators"] = col1.number_input("n_estimators", 10, 500, 100, step=10, key="xgb_n_estimators")
+    xgb_params["max_depth"] = col2.number_input("max_depth", 2, 20, 6, key="xgb_max_depth")
+    xgb_params["learning_rate"] = col3.select_slider("learning_rate", [0.001, 0.01, 0.05, 0.1, 0.2, 0.3], 0.1, key="xgb_learning_rate")
     col4, col5 = st.columns(2)
-    xgb_params["subsample"] = col4.select_slider("subsample", [0.4, 0.6, 0.8, 1.0], 0.8)
-    xgb_params["colsample_bytree"] = col5.select_slider("colsample_bytree", [0.4, 0.6, 0.8, 1.0], 0.8)
+    xgb_params["subsample"] = col4.select_slider("subsample", [0.4, 0.6, 0.8, 1.0], 0.8, key="xgb_subsample")
+    xgb_params["colsample_bytree"] = col5.select_slider("colsample_bytree", [0.4, 0.6, 0.8, 1.0], 0.8, key="xgb_colsample_bytree")
     xgb_params["random_state"] = RANDOM_STATE
     xgb_params["eval_metric"] = "logloss"
 
 with st.expander("Parámetros - Random Forest", expanded="Random Forest" in models_to_train):
     col1, col2, col3 = st.columns(3)
-    rf_params["n_estimators"] = col1.number_input("n_estimators", 10, 500, 100, step=10)
-    rf_params["max_depth"] = col2.number_input("max_depth", 2, 30, 6) or None
-    rf_params["min_samples_split"] = col3.number_input("min_samples_split", 2, 20, 2)
+    rf_params["n_estimators"] = col1.number_input("n_estimators", 10, 500, 100, step=10, key="rf_n_estimators")
+    rf_params["max_depth"] = col2.number_input("max_depth", 2, 30, 6, key="rf_max_depth") or None
+    rf_params["min_samples_split"] = col3.number_input("min_samples_split", 2, 20, 2, key="rf_min_samples_split")
     rf_params["random_state"] = RANDOM_STATE
 
 if st.button("🚀 Iniciar Entrenamiento", type="primary", use_container_width=True):

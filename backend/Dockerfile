@@ -31,8 +31,8 @@ ENV CNN_MODEL_FILE_ID=$CNN_MODEL_FILE_ID \
     TABULAR_MODEL_FILE_ID=$TABULAR_MODEL_FILE_ID
 RUN python -m app.download_models || echo "Descarga opcional omitida (sin FILE_IDs)"
 
-# Render inyecta la variable de entorno PORT; exponemos 8000 como referencia local
-EXPOSE 8000
+# Cloud Run inyecta PORT=8080; con docker local corre en 8000 por defecto
+EXPOSE 8080
 
-# Usamos sh -c para poder usar la variable $PORT que Render define en runtime
+# Usamos sh -c para usar la variable $PORT que la plataforma asigna en runtime
 CMD ["sh", "-c", "uvicorn app.main:app --host 0.0.0.0 --port ${PORT:-8000}"]
