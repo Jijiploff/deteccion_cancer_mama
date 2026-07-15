@@ -45,7 +45,7 @@ def wilcoxon_test(y_true, y_proba_model1, y_proba_model2):
 
     try:
         stat, p = wilcoxon(diff, alternative="two-sided")
-        return {"statistic": round(float(stat), 4), "p_value": round(float(p_value), 4)}
+        return {"statistic": round(float(stat), 4), "p_value": round(float(p), 4)}
     except ValueError as e:
         return {"statistic": None, "p_value": None, "error": str(e)}
 

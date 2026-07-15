@@ -198,8 +198,15 @@ async def predict(
             detail="No se pudo ejecutar ningún modelo.",
         )
 
+    successful_results = [r for r in results if r.get("status") == "success"]
+    if not successful_results:
+        raise HTTPException(
+            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+            detail="No se pudo ejecutar ningún modelo con éxito.",
+        )
+
     consensus, best_label, best_confidence = compute_consensus(results)
-    best_result = max(results, key=lambda r: r["confidence"] if r["status"] == "success" else 0)
+    best_result = max(successful_results, key=lambda r: r["confidence"])
 
     prediction_id = str(uuid.uuid4())
     timestamp = datetime.now(timezone.utc)

@@ -11,13 +11,28 @@ warnings.filterwarnings("ignore")
 
 
 class BreastCancerEDA:
-    def __init__(self, base_path: str):
-        self.base_path = Path(base_path)
-        self.csv_path = self.base_path / "CSVFiles"
-        self.images_path = self.base_path / "BreastCancer_Images" / "jpeg"
-        self.tabular_path = self.base_path / "BreastCancer_Tabular"
-        self.database_path = self.base_path / "Database"
-        self.results_path = self.base_path / "Resultados"
+    def __init__(self, base_path: str = None, *,
+                 csv_path: str = None,
+                 images_path: str = None,
+                 tabular_path: str = None,
+                 database_path: str = None,
+                 results_path: str = None):
+        if base_path is not None:
+            _base = Path(base_path)
+            self.base_path = _base
+            self.csv_path = Path(csv_path) if csv_path else _base / "CSVFiles"
+            self.images_path = Path(images_path) if images_path else _base / "BreastCancer_Images" / "jpeg"
+            self.tabular_path = Path(tabular_path) if tabular_path else _base / "BreastCancer_Tabular"
+            self.database_path = Path(database_path) if database_path else _base / "Database"
+            self.results_path = Path(results_path) if results_path else _base / "Resultados"
+        else:
+            from config import DATA_DIR, IMAGES_DIR, TABULAR_DIR, DATABASE_DIR, RESULTS_DIR
+            self.csv_path = Path(csv_path or DATA_DIR)
+            self.images_path = Path(images_path or IMAGES_DIR)
+            self.tabular_path = Path(tabular_path or TABULAR_DIR)
+            self.database_path = Path(database_path or DATABASE_DIR)
+            self.results_path = Path(results_path or RESULTS_DIR)
+            self.base_path = self.csv_path.parent
 
         self.results_path.mkdir(exist_ok=True)
 

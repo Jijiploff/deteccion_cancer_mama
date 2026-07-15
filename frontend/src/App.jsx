@@ -8,6 +8,7 @@ import HistoryList from './components/HistoryList'
 import Dashboard from './components/Dashboard'
 import Login from './components/Login'
 import Footer from './components/Footer'
+import HelpChatbot from './components/Helpchatbot'
 import { useDarkMode } from './hooks/useDarkMode'
 import { useHistory } from './hooks/useHistory'
 import { predictImage, checkHealth } from './api'
@@ -128,11 +129,21 @@ export default function App() {
   }
 
   if (page === 'login') {
-    return <Login onLogin={handleLogin} />
+    return (
+      <>
+        <Login onLogin={handleLogin} />
+        <HelpChatbot />
+      </>
+    )
   }
 
   if (page === 'dashboard') {
-    return <Dashboard username={username} onLogout={() => { handleLogout(); setPage('login') }} />
+    return (
+      <>
+        <Dashboard username={username} onLogout={() => { handleLogout(); setPage('login') }} />
+        <HelpChatbot />
+      </>
+    )
   }
 
   return (
@@ -184,6 +195,7 @@ export default function App() {
         <HistoryList items={historyItems} loading={historyLoading} onClear={clear} />
       </main>
       <Footer />
+      <HelpChatbot />
     </div>
   )
 }

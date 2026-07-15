@@ -5,11 +5,11 @@ from pydantic import BaseModel, Field
 
 class ModelResult(BaseModel):
     model_name: str
-    model_label: str = Field(..., description="BENIGN o MALIGNANT")
-    confidence: float = Field(..., ge=0, le=1)
-    benign_prob: float = Field(..., ge=0, le=1)
-    malignant_prob: float = Field(..., ge=0, le=1)
-    processing_time_ms: float
+    model_label: Optional[str] = Field(default=None, description="BENIGN o MALIGNANT")
+    confidence: Optional[float] = Field(default=None, ge=0, le=1)
+    benign_prob: Optional[float] = Field(default=None, ge=0, le=1)
+    malignant_prob: Optional[float] = Field(default=None, ge=0, le=1)
+    processing_time_ms: Optional[float] = None
     status: str = Field(..., description="success | error | unavailable")
     error: Optional[str] = None
 
