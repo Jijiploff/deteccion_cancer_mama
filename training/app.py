@@ -1,35 +1,276 @@
 import streamlit as st
 
 from modules.auth import require_auth, logout, check_auth
-from config import APP_TITLE, APP_ICON
+from modules.i18n import get_translation
+from config import APP_ICON
 
+# Initialize session state
+if "language" not in st.session_state:
+    st.session_state.language = "es"
+if "theme" not in st.session_state:
+    st.session_state.theme = "dark"
+
+# Set page config with theme
 st.set_page_config(
-    page_title=APP_TITLE,
+    page_title=get_translation(st.session_state.language, "app_title"),
     page_icon=APP_ICON,
     layout="wide",
     initial_sidebar_state="expanded",
 )
 
+
+def apply_theme(theme: str):
+    """
+    Aplica el CSS del tema. Se debe llamar en app.py y en CADA archivo
+    dentro de views/ (antes 'pages/') para que el estilo sea consistente
+    en toda la navegación.
+    """
+    # Oculta la navegación nativa de Streamlit por si alguna vez existe
+    # una carpeta llamada 'pages' junto a este script.
+    hide_native_nav = """
+        <style>
+            [data-testid="stSidebarNav"] { display: none; }
+        </style>
+    """
+    st.markdown(hide_native_nav, unsafe_allow_html=True)
+
+    if theme == "light":
+        st.markdown(
+            """
+            <style>
+                .stApp {
+                    background-color: #FFFFFF;
+                }
+                [data-testid="stSidebar"] {
+                    background-color: #F3F4F6;
+                }
+                .stMarkdown, .stText, p, h1, h2, h3, h4, h5, h6, span, div, label {
+                    color: #000000 !important;
+                }
+
+                /* --- Botones (normal, sidebar y dentro de forms) --- */
+                .stButton > button,
+                [data-testid="stSidebar"] .stButton > button,
+                [data-testid="baseButton-secondary"],
+                [data-testid="baseButton-primary"] {
+                    background-color: #FFFFFF !important;
+                    color: #000000 !important;
+                    border: 1px solid #D1D5DB !important;
+                }
+                .stButton > button:hover,
+                [data-testid="stSidebar"] .stButton > button:hover {
+                    background-color: #E5E7EB !important;
+                    color: #000000 !important;
+                    border-color: #9CA3AF !important;
+                }
+                .stButton > button p {
+                    color: inherit !important;
+                }
+
+                /* --- Inputs / selects / text areas --- */
+                .stTextInput input,
+                .stNumberInput input,
+                .stTextArea textarea,
+                [data-testid="stSelectbox"] div[data-baseweb="select"] > div,
+                [data-testid="stMultiSelect"] div[data-baseweb="select"] > div {
+                    background-color: #FFFFFF !important;
+                    color: #000000 !important;
+                    border: 1px solid #D1D5DB !important;
+                }
+
+                /* --- Tablas / dataframes --- */
+                [data-testid="stDataFrame"] table {
+                    background-color: #FFFFFF !important;
+                    color: #000000 !important;
+                }
+                [data-testid="stDataFrame"] th {
+                    background-color: #E5E7EB !important;
+                    color: #000000 !important;
+                }
+                [data-testid="stDataFrame"] td {
+                    background-color: #FFFFFF !important;
+                    color: #000000 !important;
+                }
+
+                /* --- Tablas estáticas (st.table) --- */
+                [data-testid="stTable"] table,
+                [data-testid="stTable"] th,
+                [data-testid="stTable"] td {
+                    background-color: #FFFFFF !important;
+                    color: #000000 !important;
+                }
+                [data-testid="stTable"] th {
+                    background-color: #E5E7EB !important;
+                }
+
+                /* --- Header / toolbar nativos de Streamlit --- */
+                [data-testid="stHeader"] {
+                    background-color: #FFFFFF !important;
+                }
+                [data-testid="stToolbar"] {
+                    background-color: #FFFFFF !important;
+                }
+                [data-testid="stHeader"] svg,
+                [data-testid="stToolbar"] svg {
+                    fill: #000000 !important;
+                }
+
+                /* --- Barra de herramientas flotante del st.dataframe --- */
+                /* (ícono ojo / descargar / lupa / pantalla completa que aparece */
+                /* al pasar el mouse). El dataframe se deja con su tema nativo */
+                /* oscuro, así que estos íconos deben permanecer blancos y no */
+                /* heredar el color negro del texto general en modo claro. */
+                [data-testid="stElementToolbar"],
+                [data-testid="stElementToolbar"] * {
+                    color: #FFFFFF !important;
+                    fill: #FFFFFF !important;
+                }
+                [data-testid="stElementToolbar"] button {
+                    background-color: transparent !important;
+                }
+                [data-testid="stElementToolbar"] button:hover {
+                    background-color: #3F3F5C !important;
+                }
+            </style>
+            """,
+            unsafe_allow_html=True,
+        )
+    else:
+        st.markdown(
+            """
+            <style>
+                .stApp {
+                    background-color: #0F0F1A;
+                }
+                [data-testid="stSidebar"] {
+                    background-color: #1A1A2E;
+                }
+                .stMarkdown, .stText, p, h1, h2, h3, h4, h5, h6, span, div, label {
+                    color: #F1F1F6 !important;
+                }
+
+                /* --- Botones --- */
+                .stButton > button,
+                [data-testid="stSidebar"] .stButton > button,
+                [data-testid="baseButton-secondary"],
+                [data-testid="baseButton-primary"] {
+                    background-color: #2D2D44 !important;
+                    color: #F1F1F6 !important;
+                    border: 1px solid #3F3F5C !important;
+                }
+                .stButton > button:hover,
+                [data-testid="stSidebar"] .stButton > button:hover {
+                    background-color: #3F3F5C !important;
+                    color: #F1F1F6 !important;
+                    border-color: #55557A !important;
+                }
+                .stButton > button p {
+                    color: inherit !important;
+                }
+
+                /* --- Inputs / selects / text areas --- */
+                .stTextInput input,
+                .stNumberInput input,
+                .stTextArea textarea,
+                [data-testid="stSelectbox"] div[data-baseweb="select"] > div,
+                [data-testid="stMultiSelect"] div[data-baseweb="select"] > div {
+                    background-color: #1A1A2E !important;
+                    color: #F1F1F6 !important;
+                    border: 1px solid #3F3F5C !important;
+                }
+
+                /* --- Tablas / dataframes --- */
+                [data-testid="stDataFrame"] table {
+                    background-color: #1A1A2E !important;
+                    color: #F1F1F6 !important;
+                }
+                [data-testid="stDataFrame"] th {
+                    background-color: #2D2D44 !important;
+                    color: #F1F1F6 !important;
+                }
+                [data-testid="stDataFrame"] td {
+                    background-color: #1A1A2E !important;
+                    color: #F1F1F6 !important;
+                }
+
+                /* --- Tablas estáticas (st.table) --- */
+                [data-testid="stTable"] table,
+                [data-testid="stTable"] th,
+                [data-testid="stTable"] td {
+                    background-color: #1A1A2E !important;
+                    color: #F1F1F6 !important;
+                }
+                [data-testid="stTable"] th {
+                    background-color: #2D2D44 !important;
+                }
+
+                /* --- Header / toolbar nativos de Streamlit --- */
+                [data-testid="stHeader"] {
+                    background-color: #0F0F1A !important;
+                }
+                [data-testid="stToolbar"] {
+                    background-color: #0F0F1A !important;
+                }
+                [data-testid="stHeader"] svg,
+                [data-testid="stToolbar"] svg {
+                    fill: #F1F1F6 !important;
+                }
+            </style>
+            """,
+            unsafe_allow_html=True,
+        )
+
+
+apply_theme(st.session_state.theme)
+
 require_auth()
 
-PAGES = {
-    "📊 Dashboard": "pages/01_Dashboard.py",
-    "📋 EDA - Análisis Exploratorio": "pages/02_EDA.py",
-    "🧠 Entrenamiento": "pages/03_Training.py",
-    "🔁 Validación Cruzada": "pages/04_CrossValidation.py",
-    "⚙️ Hiperparámetros": "pages/05_HyperparameterTuning.py",
-    "📈 Pruebas Estadísticas": "pages/06_StatisticalTests.py",
-    "📑 Reportes": "pages/07_Reports.py",
-}
-
+# Sidebar header
 st.sidebar.markdown(
-    f"# {APP_ICON} {APP_TITLE}",
+    f"# {APP_ICON} {get_translation(st.session_state.language, 'app_title')}",
 )
 st.sidebar.markdown("---")
 
+# Theme and language toggles
+st.sidebar.subheader(get_translation(st.session_state.language, "theme"))
+# El botón debe indicar la ACCIÓN (a qué modo se cambiará), no el modo actual.
+if st.session_state.theme == "dark":
+    toggle_label = f"☀️ {get_translation(st.session_state.language, 'light')}"
+else:
+    toggle_label = f"🌙 {get_translation(st.session_state.language, 'dark')}"
+if st.sidebar.button(toggle_label, use_container_width=True):
+    st.session_state.theme = "light" if st.session_state.theme == "dark" else "dark"
+    st.rerun()
+
+st.sidebar.subheader(get_translation(st.session_state.language, "language"))
+lang_label = "English" if st.session_state.language == "es" else "Español"
+if st.sidebar.button(f"🌐 {lang_label}", use_container_width=True):
+    st.session_state.language = "en" if st.session_state.language == "es" else "es"
+    st.rerun()
+
+st.sidebar.markdown("---")
+
+# Page navigation
+# NOTA: se usa la carpeta 'views/' en lugar de 'pages/' a propósito.
+# Streamlit auto-detecta cualquier carpeta llamada 'pages' junto al script
+# principal y genera su propia navegación nativa en la sidebar, la cual
+# ejecuta esos archivos de forma AISLADA (sin pasar por este app.py).
+# Eso hacía que el CSS de tema y los botones de idioma/tema no aparecieran
+# en las demás páginas. Renombrando a 'views/' evitamos ese conflicto y
+# garantizamos que TODA la navegación pase por la lógica de exec() de abajo.
+PAGES = {
+    get_translation(st.session_state.language, "pages.dashboard"): "views/01_Dashboard.py",
+    get_translation(st.session_state.language, "pages.eda"): "views/02_EDA.py",
+    get_translation(st.session_state.language, "pages.training"): "views/03_Training.py",
+    get_translation(st.session_state.language, "pages.cross_validation"): "views/04_CrossValidation.py",
+    get_translation(st.session_state.language, "pages.hyperparameter_tuning"): "views/05_HyperparameterTuning.py",
+    get_translation(st.session_state.language, "pages.statistical_tests"): "views/06_StatisticalTests.py",
+    get_translation(st.session_state.language, "pages.reports"): "views/07_Reports.py",
+}
+
 if check_auth():
     username = st.session_state.get("username", "admin")
-    st.sidebar.markdown(f"**Usuario:** {username}")
+    st.sidebar.markdown(f"**{get_translation(st.session_state.language, 'user')}:** {username}")
     st.sidebar.markdown("---")
 
     selected = None
@@ -38,7 +279,7 @@ if check_auth():
             selected = label
 
     st.sidebar.markdown("---")
-    if st.sidebar.button("🚪 Cerrar Sesión", use_container_width=True):
+    if st.sidebar.button(get_translation(st.session_state.language, "logout"), use_container_width=True):
         logout()
 
     page_file = st.session_state.get("current_page", None)
@@ -53,4 +294,4 @@ if check_auth():
         except Exception as e:
             st.error(f"Error al cargar la página: {e}")
     else:
-        exec(open("pages/01_Dashboard.py", encoding="utf-8").read())
+        exec(open("views/01_Dashboard.py", encoding="utf-8").read())

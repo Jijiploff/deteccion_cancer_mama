@@ -24,6 +24,16 @@ function StatusDot({ status }) {
   return <span className={`inline-block h-2 w-2 rounded-full ${color}`} />
 }
 
+function formatPercent(value) {
+  return typeof value === 'number' ? `${(value * 100).toFixed(1)}%` : 'N/D'
+}
+
+function statusLabel(status) {
+  if (status === 'success') return 'Ejecutado'
+  if (status === 'error') return 'Error'
+  return 'No disponible'
+}
+
 export default function ResultPanel({ status, result, errorMessage, onRetry }) {
   return (
     <div className="flex flex-col gap-3">
@@ -81,6 +91,8 @@ export default function ResultPanel({ status, result, errorMessage, onRetry }) {
                   <tr className="border-b border-line text-left text-muted">
                     <th className="pb-2 pr-3 font-medium">Modelo</th>
                     <th className="pb-2 pr-3 font-medium">Diagnóstico</th>
+                    <th className="pb-2 pr-3 font-medium">Prob. Benigna</th>
+                    <th className="pb-2 pr-3 font-medium">Prob. Maligna</th>
                     <th className="pb-2 pr-3 font-medium">Confianza</th>
                     <th className="pb-2 pr-3 font-medium">Tiempo</th>
                     <th className="pb-2 font-medium">Estado</th>
@@ -91,18 +103,32 @@ export default function ResultPanel({ status, result, errorMessage, onRetry }) {
                     <tr key={i} className="border-b border-line/50">
                       <td className="py-2.5 pr-3 text-ink">{m.model_name}</td>
                       <td className="py-2.5 pr-3">
-                        <span className={m.model_label === 'MALIGNANT' ? 'text-malignant font-semibold' : 'text-benign font-semibold'}>
-                          {m.model_label === 'BENIGN' ? 'Benigno' : 'Maligno'}
-                        </span>
+                        {m.model_label ? (
+                          <span className={m.model_label === 'MALIGNANT' ? 'text-malignant font-semibold' : 'text-benign font-semibold'}>
+                            {m.model_label === 'BENIGN' ? 'Benigno' : 'Maligno'}
+                          </span>
+                        ) : (
+                          <span className="text-muted">N/D</span>
+                        )}
                       </td>
                       <td className="py-2.5 pr-3 text-ink">
-                        {(m.confidence * 100).toFixed(1)}%
+                        {formatPercent(m.benign_prob)}
+                      </td>
+                      <td className="py-2.5 pr-3 text-ink">
+                        {formatPercent(m.malignant_prob)}
+                      </td>
+                      <td className="py-2.5 pr-3 text-ink">
+                        {formatPercent(m.confidence)}
                       </td>
                       <td className="py-2.5 pr-3 text-muted">
-                        {m.processing_time_ms.toFixed(0)} ms
+                        {typeof m.processing_time_ms === 'number' ? `${m.processing_time_ms.toFixed(0)} ms` : 'N/D'}
                       </td>
                       <td className="py-2.5">
-                        <StatusDot status={m.status} />
+                        <div className="flex items-center gap-2">
+                          <StatusDot status={m.status} />
+                          <span className="text-[10px] text-muted">{statusLabel(m.status)}</span>
+                        </div>
+                        {m.error && <p className="mt-1 max-w-[220px] text-[10px] text-muted">{m.error}</p>}
                       </td>
                     </tr>
                   ))}

@@ -197,23 +197,74 @@ class ModelHandler:
             "error": None,
         }
 
+    def _model_unavailable_result(self, model_name: str, reason: str, status: str = "unavailable") -> dict:
+        return {
+            "model_name": model_name,
+            "model_label": None,
+            "confidence": None,
+            "benign_prob": None,
+            "malignant_prob": None,
+            "processing_time_ms": None,
+            "status": status,
+            "error": reason,
+        }
+
     def predict_all(self, raw_bytes: bytes,
                     clinical_data: Optional[list[float]] = None,
                     wisconsin_data: Optional[list[float]] = None) -> list[dict]:
         results = []
-        cnn_result = self._run_cnn(raw_bytes)
-        if cnn_result:
-            results.append(cnn_result)
+        if self._models.get("CNN") is not None:
+            cnn_result = self._run_cnn(raw_bytes)
+            if cnn_result:
+                results.append(cnn_result)
+        else:
+            results.append(
+                self._model_unavailable_result(
+                    "CNN (EfficientNet)",
+                    self._load_errors.get("CNN") or "Modelo no cargado.",
+                    status="error" if self._load_errors.get("CNN") else "unavailable",
+                )
+            )
 
-        if clinical_data is not None and len(clinical_data) == 4:
+        if self._models.get("Ensemble") is None:
+            results.append(
+                self._model_unavailable_result(
+                    "Ensemble (CNN + Clínico)",
+                    self._load_errors.get("Ensemble") or "Modelo no cargado.",
+                    status="error" if self._load_errors.get("Ensemble") else "unavailable",
+                )
+            )
+        elif clinical_data is not None and len(clinical_data) == 4:
             ens_result = self._run_ensemble(raw_bytes, clinical_data)
             if ens_result:
                 results.append(ens_result)
+        else:
+            results.append(
+                self._model_unavailable_result(
+                    "Ensemble (CNN + Clínico)",
+                    "Faltan datos clínicos para este modelo.",
+                )
+            )
 
-        if wisconsin_data is not None and len(wisconsin_data) == 30:
+        if self._models.get("XGBoost") is None:
+            results.append(
+                self._model_unavailable_result(
+                    "XGBoost (Wisconsin)",
+                    self._load_errors.get("XGBoost") or "Modelo no cargado.",
+                    status="error" if self._load_errors.get("XGBoost") else "unavailable",
+                )
+            )
+        elif wisconsin_data is not None and len(wisconsin_data) == 30:
             xgb_result = self._run_xgboost(wisconsin_data)
             if xgb_result:
                 results.append(xgb_result)
+        else:
+            results.append(
+                self._model_unavailable_result(
+                    "XGBoost (Wisconsin)",
+                    "Faltan variables Wisconsin para este modelo.",
+                )
+            )
 
         return results
 
