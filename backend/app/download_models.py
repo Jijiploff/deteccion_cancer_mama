@@ -6,7 +6,7 @@ from app.config import settings
 
 logger = logging.getLogger("download_models")
 
-REPO_ID = "tu-usuario/cancer-mama-models"
+REPO_ID = "Jijiploff/cr-mama-models"
 
 FILES = {
     "cnn_efficientnet_20260707_061411.keras": settings.CNN_MODEL_PATH,
@@ -30,4 +30,3 @@ def download_all_models():
 if __name__ == "__main__":
     logging.basicConfig(level=logging.INFO, format="%(levelname)s | %(message)s")
     download_all_models()
-    
