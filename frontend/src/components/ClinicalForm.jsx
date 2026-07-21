@@ -43,7 +43,7 @@ const WISCONSIN_FIELDS = [
   { key: 'fractal_dimension_worst', label: 'Dim. fractal peor', step: 0.001 },
 ]
 
-export default function ClinicalForm({ show, formData, formErrors, onChange }) {
+export default function ClinicalForm({ show, formData, onChange }) {
   if (!show) return null
 
   const handleChange = (key) => (e) => {
@@ -53,78 +53,30 @@ export default function ClinicalForm({ show, formData, formErrors, onChange }) {
   return (
     <div className="flex flex-col gap-4 rounded-xl border border-line bg-surface p-5">
       <h2 className="font-display text-sm font-semibold tracking-tight">
-        Datos clínicos
+        Características Wisconsin
       </h2>
       <p className="font-mono text-[11px] text-muted">
-        Llena los campos disponibles para activar los modelos Ensemble y XGBoost. Los valores se pre-rellenan con las medias del dataset.
+        Llena los campos disponibles para activar el modelo Tabular RF. Los valores se pre-rellenan con las medias del dataset.
       </p>
 
-      <div className="grid gap-4 sm:grid-cols-2">
-        <div>
-          <label className="font-mono text-[11px] text-muted">Assessment (BI-RADS) *</label>
-          <input
-            type="number" step="1" min="0" max="6"
-            value={formData.assessment}
-            onChange={handleChange('assessment')}
-            className="mt-1 w-full rounded-lg border border-line bg-bg px-3 py-2 font-mono text-xs text-ink outline-none focus:border-accent"
-            placeholder="3"
-          />
-          {formErrors.assessment && <p className="mt-1 font-mono text-[10px] text-malignant">{formErrors.assessment}</p>}
-        </div>
-        <div>
-          <label className="font-mono text-[11px] text-muted">Subtlety *</label>
-          <input
-            type="number" step="1" min="1" max="5"
-            value={formData.subtlety}
-            onChange={handleChange('subtlety')}
-            className="mt-1 w-full rounded-lg border border-line bg-bg px-3 py-2 font-mono text-xs text-ink outline-none focus:border-accent"
-            placeholder="3"
-          />
-          {formErrors.subtlety && <p className="mt-1 font-mono text-[10px] text-malignant">{formErrors.subtlety}</p>}
-        </div>
-        <div>
-          <label className="font-mono text-[11px] text-muted">Edad *</label>
-          <input
-            type="number" step="1" min="18" max="120"
-            value={formData.age}
-            onChange={handleChange('age')}
-            className="mt-1 w-full rounded-lg border border-line bg-bg px-3 py-2 font-mono text-xs text-ink outline-none focus:border-accent"
-            placeholder="50"
-          />
-          {formErrors.age && <p className="mt-1 font-mono text-[10px] text-malignant">{formErrors.age}</p>}
-        </div>
-        <div>
-          <label className="font-mono text-[11px] text-muted">Densidad mamaria *</label>
-          <input
-            type="number" step="1" min="1" max="4"
-            value={formData.density}
-            onChange={handleChange('density')}
-            className="mt-1 w-full rounded-lg border border-line bg-bg px-3 py-2 font-mono text-xs text-ink outline-none focus:border-accent"
-            placeholder="2"
-          />
-          {formErrors.density && <p className="mt-1 font-mono text-[10px] text-malignant">{formErrors.density}</p>}
-        </div>
+      <div className="grid grid-cols-2 gap-x-4 gap-y-2 sm:grid-cols-3">
+        {WISCONSIN_FIELDS.map(({ key, label, step }) => (
+          <div key={key}>
+            <label className="font-mono text-[10px] text-muted">{label}</label>
+            <input
+              type="number" step={step}
+              value={formData[key]}
+              onChange={handleChange(key)}
+              className="mt-0.5 w-full rounded-lg border border-line bg-bg px-2 py-1.5 font-mono text-[11px] text-ink outline-none focus:border-accent"
+            />
+          </div>
+        ))}
       </div>
-
-      <details className="group">
-        <summary className="cursor-pointer font-mono text-[11px] text-muted hover:text-ink">
-          Características Wisconsin (30 campos) — opcional
-        </summary>
-        <div className="mt-3 grid grid-cols-2 gap-x-4 gap-y-2 sm:grid-cols-3">
-          {WISCONSIN_FIELDS.map(({ key, label, step }) => (
-            <div key={key}>
-              <label className="font-mono text-[10px] text-muted">{label}</label>
-              <input
-                type="number" step={step}
-                value={formData[key]}
-                onChange={handleChange(key)}
-                className="mt-0.5 w-full rounded-lg border border-line bg-bg px-2 py-1.5 font-mono text-[11px] text-ink outline-none focus:border-accent"
-              />
-            </div>
-          ))}
-        </div>
-      </details>
     </div>
+  )
+}
+
+export { WISCONSIN_DEFAULTS, WISCONSIN_FIELDS }
   )
 }
 
