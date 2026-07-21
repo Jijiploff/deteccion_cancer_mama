@@ -77,7 +77,3 @@ export default function ClinicalForm({ show, formData, onChange }) {
 }
 
 export { WISCONSIN_DEFAULTS, WISCONSIN_FIELDS }
-  )
-}
-
-export { WISCONSIN_DEFAULTS, WISCONSIN_FIELDS }
