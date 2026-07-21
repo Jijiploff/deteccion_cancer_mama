@@ -1,19 +1,20 @@
+import { useLanguage } from '../context/LanguageContext'
+
 export default function Hero() {
+  const { t } = useLanguage()
+
   return (
     <section className="mx-auto max-w-6xl px-5 pb-10 pt-14 sm:px-8 sm:pt-20">
       <p className="font-mono text-xs uppercase tracking-[0.2em] text-accent">
-        Sistema de apoyo diagnóstico · Deep Learning
+        {t('hero.badge')}
       </p>
       <h1 className="mt-4 max-w-2xl font-display text-3xl font-semibold leading-[1.15] tracking-tight sm:text-5xl">
-        Lee la mamografía con detalle.
+        {t('hero.heading1')}
         <br />
-        Decide con criterio clínico.
+        {t('hero.heading2')}
       </h1>
       <p className="mt-5 max-w-xl text-[15px] leading-relaxed text-muted">
-        Sube una imagen de mamografía y el modelo entrenado con CBIS-DDSM estima
-        la probabilidad de hallazgos benignos o malignos en segundos. Cada
-        resultado incluye su nivel de confianza para apoyar, no reemplazar, el
-        criterio del especialista.
+        {t('hero.description')}
       </p>
       <div
         role="note"
@@ -30,8 +31,7 @@ export default function Hero() {
           <circle cx="12" cy="16" r="0.9" fill="currentColor" />
         </svg>
         <span>
-          Herramienta de apoyo, no un diagnóstico definitivo. La confirmación
-          siempre corresponde a un profesional médico calificado.
+          {t('hero.note')}
         </span>
       </div>
     </section>

@@ -1,9 +1,11 @@
 import { useCallback, useRef, useState } from 'react'
+import { useLanguage } from '../context/LanguageContext'
 
 const ACCEPTED_TYPES = ['image/jpeg', 'image/jpg', 'image/png']
 const MAX_SIZE_MB = 5
 
 export default function UploadPanel({ onFileSelected, previewUrl, isLoading, filename }) {
+  const { t } = useLanguage()
   const [isDragging, setIsDragging] = useState(false)
   const [localError, setLocalError] = useState(null)
   const inputRef = useRef(null)
@@ -12,17 +14,17 @@ export default function UploadPanel({ onFileSelected, previewUrl, isLoading, fil
     (file) => {
       if (!file) return
       if (!ACCEPTED_TYPES.includes(file.type)) {
-        setLocalError('Formato no soportado. Usa JPG o PNG.')
+        setLocalError(t('upload.format_error'))
         return
       }
       if (file.size > MAX_SIZE_MB * 1024 * 1024) {
-        setLocalError(`El archivo supera el límite de ${MAX_SIZE_MB}MB.`)
+        setLocalError(t('upload.size_error', { max: MAX_SIZE_MB }))
         return
       }
       setLocalError(null)
       onFileSelected(file)
     },
-    [onFileSelected]
+    [onFileSelected, t]
   )
 
   const handleDrop = (event) => {
@@ -36,7 +38,7 @@ export default function UploadPanel({ onFileSelected, previewUrl, isLoading, fil
     <div className="flex flex-col gap-3">
       <div className="flex items-center justify-between">
         <h2 className="font-display text-sm font-semibold tracking-tight">
-          Visor de imagen
+          {t('upload.title')}
         </h2>
         {filename && (
           <span className="truncate font-mono text-[11px] text-muted">{filename}</span>
@@ -59,7 +61,7 @@ export default function UploadPanel({ onFileSelected, previewUrl, isLoading, fil
           <>
             <img
               src={previewUrl}
-              alt="Vista previa de la mamografía cargada"
+              alt={t('upload.alt_preview')}
               className="h-full w-full object-contain"
             />
             {isLoading && (
@@ -92,11 +94,11 @@ export default function UploadPanel({ onFileSelected, previewUrl, isLoading, fil
               />
             </svg>
             <p className="font-body text-sm text-neutral-300">
-              Arrastra la imagen aquí o
-              <span className="text-accent"> haz clic para seleccionarla</span>
+              {t('upload.drop_hint')}{' '}
+              <span className="text-accent">{t('upload.drop_link')}</span>
             </p>
             <p className="font-mono text-[11px] text-neutral-500">
-              JPG o PNG · máx. {MAX_SIZE_MB}MB
+              {t('upload.format_hint', { max: MAX_SIZE_MB })}
             </p>
           </div>
         )}

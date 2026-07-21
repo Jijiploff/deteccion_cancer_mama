@@ -1,4 +1,8 @@
-export default function Spinner({ label = 'Procesando' }) {
+import { useLanguage } from '../context/LanguageContext'
+
+export default function Spinner({ label }) {
+  const { t } = useLanguage()
+
   return (
     <div className="flex items-center gap-2.5" role="status">
       <svg
@@ -22,8 +26,8 @@ export default function Spinner({ label = 'Procesando' }) {
           strokeLinecap="round"
         />
       </svg>
-      <span className="font-mono text-xs text-muted">{label}</span>
-      <span className="sr-only">Cargando</span>
+      <span className="font-mono text-xs text-muted">{label || t('spinner.processing')}</span>
+      <span className="sr-only">{t('spinner.loading')}</span>
     </div>
   )
 }

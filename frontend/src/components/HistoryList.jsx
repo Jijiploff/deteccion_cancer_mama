@@ -1,9 +1,13 @@
+import { useLanguage } from '../context/LanguageContext'
+
 export default function HistoryList({ items, loading, onClear }) {
+  const { t, language } = useLanguage()
+
   return (
     <section className="mx-auto max-w-6xl px-5 pb-20 pt-4 sm:px-8">
       <div className="flex items-center justify-between border-b border-line pb-3">
         <h2 className="font-display text-sm font-semibold tracking-tight">
-          Historial reciente
+          {t('history.title')}
         </h2>
         {items.length > 0 && (
           <button
@@ -11,18 +15,18 @@ export default function HistoryList({ items, loading, onClear }) {
             onClick={onClear}
             className="font-mono text-[11px] uppercase tracking-wider text-muted transition-colors hover:text-malignant"
           >
-            Limpiar
+            {t('history.clear')}
           </button>
         )}
       </div>
 
       {loading && (
-        <p className="py-6 font-mono text-xs text-muted">Cargando historial…</p>
+        <p className="py-6 font-mono text-xs text-muted">{t('history.loading')}</p>
       )}
 
       {!loading && items.length === 0 && (
         <p className="py-6 text-[13px] text-muted">
-          Aún no hay diagnósticos registrados en esta sesión del servidor.
+          {t('history.empty')}
         </p>
       )}
 
@@ -45,9 +49,9 @@ export default function HistoryList({ items, loading, onClear }) {
                 </div>
                 <div className="flex flex-shrink-0 items-center gap-4 font-mono text-[11px] text-muted">
                   <span className={isMalignant ? 'text-malignant' : 'text-benign'}>
-                    {isMalignant ? 'Maligno' : 'Benigno'} · {Math.round(item.confidence * 100)}%
+                    {isMalignant ? t('history.malignant') : t('history.benign')} · {Math.round(item.confidence * 100)}%
                   </span>
-                  <span>{new Date(item.timestamp).toLocaleString('es-PE')}</span>
+                  <span>{new Date(item.timestamp).toLocaleString(language === 'en' ? 'en-US' : 'es-PE')}</span>
                 </div>
               </li>
             )

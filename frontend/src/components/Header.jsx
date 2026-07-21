@@ -1,4 +1,8 @@
+import { useLanguage } from '../context/LanguageContext'
+
 export default function Header({ isDark, onToggleDark, username, onLogout, onDashboard }) {
+  const { t, language, toggleLanguage } = useLanguage()
+
   return (
     <header className="sticky top-0 z-30 border-b border-line bg-surface/85 backdrop-blur">
       <div className="mx-auto flex max-w-6xl items-center justify-between px-5 py-4 sm:px-8">
@@ -11,10 +15,10 @@ export default function Header({ isDark, onToggleDark, username, onLogout, onDas
           </span>
           <div className="leading-tight">
             <p className="font-display text-[15px] font-semibold tracking-tight">
-              Apoyo Diagnóstico
+              {t('header.title')}
             </p>
             <p className="font-mono text-[11px] uppercase tracking-wider text-muted">
-              Clasificación de mamografías
+              {t('header.subtitle')}
             </p>
           </div>
         </div>
@@ -29,7 +33,7 @@ export default function Header({ isDark, onToggleDark, username, onLogout, onDas
                   onClick={onDashboard}
                   className="rounded-lg border border-line px-3 py-1.5 text-xs text-ink transition-colors hover:bg-line/20"
                 >
-                  Dashboard
+                  {t('header.dashboard')}
                 </button>
               )}
               {onLogout && (
@@ -38,7 +42,7 @@ export default function Header({ isDark, onToggleDark, username, onLogout, onDas
                   onClick={onLogout}
                   className="rounded-lg border border-line px-3 py-1.5 text-xs text-ink transition-colors hover:bg-line/20"
                 >
-                  Salir
+                  {t('header.logout')}
                 </button>
               )}
             </>
@@ -46,9 +50,18 @@ export default function Header({ isDark, onToggleDark, username, onLogout, onDas
 
           <button
             type="button"
+            onClick={toggleLanguage}
+            aria-label={t('header.language')}
+            className="flex h-9 w-9 items-center justify-center rounded-full border border-line font-mono text-[11px] font-medium text-ink transition-colors hover:border-accent/50 hover:text-accent"
+          >
+            {language === 'es' ? 'EN' : 'ES'}
+          </button>
+
+          <button
+            type="button"
             onClick={() => onToggleDark(!isDark)}
             aria-pressed={isDark}
-            aria-label={isDark ? 'Cambiar a modo claro' : 'Cambiar a modo oscuro'}
+            aria-label={t(isDark ? 'header.theme_light' : 'header.theme_dark')}
             className="group flex h-9 w-9 items-center justify-center rounded-full border border-line text-ink transition-colors hover:border-accent/50 hover:text-accent"
           >
             {isDark ? (

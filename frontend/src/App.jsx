@@ -11,6 +11,7 @@ import Footer from './components/Footer'
 import HelpChatbot from './components/Helpchatbot'
 import { useDarkMode } from './hooks/useDarkMode'
 import { useHistory } from './hooks/useHistory'
+import { useLanguage } from './context/LanguageContext'
 import { predictImage, checkHealth } from './api'
 
 const INITIAL_WISCONSIN = Object.fromEntries(
@@ -19,6 +20,7 @@ const INITIAL_WISCONSIN = Object.fromEntries(
 
 export default function App() {
   const [isDark, setIsDark] = useDarkMode()
+  const { t } = useLanguage()
   const [file, setFile] = useState(null)
   const [previewUrl, setPreviewUrl] = useState(null)
   const [status, setStatus] = useState('idle')
@@ -78,7 +80,7 @@ export default function App() {
       setStatus('success')
       reload()
     } catch (err) {
-      setErrorMessage(err.message || 'Ocurrió un error inesperado.')
+      setErrorMessage(err.message || t('app.unexpected_error'))
       setStatus('error')
     }
   }, [wisconsinData, reload])
@@ -109,7 +111,7 @@ export default function App() {
               role="alert"
               className="mb-6 rounded-lg border border-malignant/30 bg-malignant/5 px-4 py-3 font-mono text-[12px] text-malignant"
             >
-              El servicio de diagnóstico no está disponible en este momento. Intenta más tarde.
+              {t('app.service_unavailable')}
             </p>
           </div>
         )}

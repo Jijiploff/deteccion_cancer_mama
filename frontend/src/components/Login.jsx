@@ -1,7 +1,9 @@
 import { useState } from 'react'
 import { API_URL } from '../api'
+import { useLanguage } from '../context/LanguageContext'
 
 export default function Login({ onLogin }) {
+  const { t } = useLanguage()
   const [username, setUsername] = useState('')
   const [password, setPassword] = useState('')
   const [error, setError] = useState(null)
@@ -24,7 +26,7 @@ export default function Login({ onLogin }) {
 
       if (!res.ok) {
         const data = await res.json().catch(() => ({}))
-        throw new Error(data.detail || 'Credenciales inválidas')
+        throw new Error(data.detail || t('login.invalid_credentials'))
       }
 
       const data = await res.json()
@@ -49,17 +51,17 @@ export default function Login({ onLogin }) {
             BC
           </span>
           <h1 className="font-display text-xl font-semibold text-ink">
-            Apoyo Diagnóstico
+            {t('login.title')}
           </h1>
           <p className="mt-1 font-mono text-[11px] uppercase tracking-wider text-muted">
-            Inicio de Sesión
+            {t('login.subtitle')}
           </p>
         </div>
 
         <form onSubmit={handleSubmit} className="space-y-4">
           <div>
             <label htmlFor="username" className="mb-1 block text-sm font-medium text-ink">
-              Usuario
+              {t('login.username_label')}
             </label>
             <input
               id="username"
@@ -67,14 +69,14 @@ export default function Login({ onLogin }) {
               value={username}
               onChange={(e) => setUsername(e.target.value)}
               className="w-full rounded-lg border border-line bg-bg px-3 py-2 text-sm text-ink placeholder:text-muted focus:border-accent focus:outline-none"
-              placeholder="admin"
+              placeholder={t('login.username_placeholder')}
               required
             />
           </div>
 
           <div>
             <label htmlFor="password" className="mb-1 block text-sm font-medium text-ink">
-              Contraseña
+              {t('login.password_label')}
             </label>
             <input
               id="password"
@@ -82,7 +84,7 @@ export default function Login({ onLogin }) {
               value={password}
               onChange={(e) => setPassword(e.target.value)}
               className="w-full rounded-lg border border-line bg-bg px-3 py-2 text-sm text-ink placeholder:text-muted focus:border-accent focus:outline-none"
-              placeholder="••••••••"
+              placeholder={t('login.password_placeholder')}
               required
             />
           </div>
@@ -98,7 +100,7 @@ export default function Login({ onLogin }) {
             disabled={loading}
             className="w-full rounded-lg bg-accent px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-accent/90 disabled:opacity-50"
           >
-            {loading ? 'Ingresando...' : 'Ingresar'}
+            {loading ? t('login.logging_in') : t('login.login_button')}
           </button>
         </form>
       </div>

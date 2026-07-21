@@ -10,40 +10,44 @@ const WISCONSIN_DEFAULTS = {
   symmetry_worst: 0.290, fractal_dimension_worst: 0.084,
 }
 
+import { useLanguage } from '../context/LanguageContext'
+
 const WISCONSIN_FIELDS = [
-  { key: 'radius_mean', label: 'Radio medio', step: 0.01 },
-  { key: 'texture_mean', label: 'Textura media', step: 0.01 },
-  { key: 'perimeter_mean', label: 'Perímetro medio', step: 0.01 },
-  { key: 'area_mean', label: 'Área media', step: 0.01 },
-  { key: 'smoothness_mean', label: 'Suavidad media', step: 0.001 },
-  { key: 'compactness_mean', label: 'Compacidad media', step: 0.001 },
-  { key: 'concavity_mean', label: 'Concavidad media', step: 0.001 },
-  { key: 'concave_points_mean', label: 'Pts. cóncavos medios', step: 0.001 },
-  { key: 'symmetry_mean', label: 'Simetría media', step: 0.001 },
-  { key: 'fractal_dimension_mean', label: 'Dimensión fractal media', step: 0.001 },
-  { key: 'radius_se', label: 'Error estándar radio', step: 0.001 },
-  { key: 'texture_se', label: 'Error estándar textura', step: 0.001 },
-  { key: 'perimeter_se', label: 'Error estándar perímetro', step: 0.001 },
-  { key: 'area_se', label: 'Error estándar área', step: 0.01 },
-  { key: 'smoothness_se', label: 'Error estándar suavidad', step: 0.0001 },
-  { key: 'compactness_se', label: 'Error estándar compacidad', step: 0.0001 },
-  { key: 'concavity_se', label: 'Error estándar concavidad', step: 0.0001 },
-  { key: 'concave_points_se', label: 'Error estándar pts. cóncavos', step: 0.0001 },
-  { key: 'symmetry_se', label: 'Error estándar simetría', step: 0.0001 },
-  { key: 'fractal_dimension_se', label: 'Error estándar dim. fractal', step: 0.0001 },
-  { key: 'radius_worst', label: 'Radio peor', step: 0.01 },
-  { key: 'texture_worst', label: 'Textura peor', step: 0.01 },
-  { key: 'perimeter_worst', label: 'Perímetro peor', step: 0.01 },
-  { key: 'area_worst', label: 'Área peor', step: 0.01 },
-  { key: 'smoothness_worst', label: 'Suavidad peor', step: 0.001 },
-  { key: 'compactness_worst', label: 'Compacidad peor', step: 0.001 },
-  { key: 'concavity_worst', label: 'Concavidad peor', step: 0.001 },
-  { key: 'concave_points_worst', label: 'Pts. cóncavos peor', step: 0.001 },
-  { key: 'symmetry_worst', label: 'Simetría peor', step: 0.001 },
-  { key: 'fractal_dimension_worst', label: 'Dim. fractal peor', step: 0.001 },
+  { key: 'radius_mean', step: 0.01 },
+  { key: 'texture_mean', step: 0.01 },
+  { key: 'perimeter_mean', step: 0.01 },
+  { key: 'area_mean', step: 0.01 },
+  { key: 'smoothness_mean', step: 0.001 },
+  { key: 'compactness_mean', step: 0.001 },
+  { key: 'concavity_mean', step: 0.001 },
+  { key: 'concave_points_mean', step: 0.001 },
+  { key: 'symmetry_mean', step: 0.001 },
+  { key: 'fractal_dimension_mean', step: 0.001 },
+  { key: 'radius_se', step: 0.001 },
+  { key: 'texture_se', step: 0.001 },
+  { key: 'perimeter_se', step: 0.001 },
+  { key: 'area_se', step: 0.01 },
+  { key: 'smoothness_se', step: 0.0001 },
+  { key: 'compactness_se', step: 0.0001 },
+  { key: 'concavity_se', step: 0.0001 },
+  { key: 'concave_points_se', step: 0.0001 },
+  { key: 'symmetry_se', step: 0.0001 },
+  { key: 'fractal_dimension_se', step: 0.0001 },
+  { key: 'radius_worst', step: 0.01 },
+  { key: 'texture_worst', step: 0.01 },
+  { key: 'perimeter_worst', step: 0.01 },
+  { key: 'area_worst', step: 0.01 },
+  { key: 'smoothness_worst', step: 0.001 },
+  { key: 'compactness_worst', step: 0.001 },
+  { key: 'concavity_worst', step: 0.001 },
+  { key: 'concave_points_worst', step: 0.001 },
+  { key: 'symmetry_worst', step: 0.001 },
+  { key: 'fractal_dimension_worst', step: 0.001 },
 ]
 
 export default function ClinicalForm({ show, formData, onChange }) {
+  const { t } = useLanguage()
+
   if (!show) return null
 
   const handleChange = (key) => (e) => {
@@ -53,16 +57,16 @@ export default function ClinicalForm({ show, formData, onChange }) {
   return (
     <div className="flex flex-col gap-4 rounded-xl border border-line bg-surface p-5">
       <h2 className="font-display text-sm font-semibold tracking-tight">
-        Características Wisconsin
+        {t('clinical_form.title')}
       </h2>
       <p className="font-mono text-[11px] text-muted">
-        Llena los campos disponibles para activar el modelo Tabular RF. Los valores se pre-rellenan con las medias del dataset.
+        {t('clinical_form.description')}
       </p>
 
       <div className="grid grid-cols-2 gap-x-4 gap-y-2 sm:grid-cols-3">
-        {WISCONSIN_FIELDS.map(({ key, label, step }) => (
+        {WISCONSIN_FIELDS.map(({ key, step }) => (
           <div key={key}>
-            <label className="font-mono text-[10px] text-muted">{label}</label>
+            <label className="font-mono text-[10px] text-muted">{t(`clinical_form.fields.${key}`)}</label>
             <input
               type="number" step={step}
               value={formData[key]}
