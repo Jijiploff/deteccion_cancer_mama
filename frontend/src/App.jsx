@@ -13,15 +13,9 @@ import { useDarkMode } from './hooks/useDarkMode'
 import { useHistory } from './hooks/useHistory'
 import { predictImage, checkHealth } from './api'
 
-const INITIAL_CLINICAL = {
-  assessment: '',
-  subtlety: '',
-  age: '',
-  density: '',
-  ...Object.fromEntries(
-    Object.entries(WISCONSIN_DEFAULTS).map(([k, v]) => [k, String(v)])
-  ),
-}
+const INITIAL_WISCONSIN = Object.fromEntries(
+  Object.entries(WISCONSIN_DEFAULTS).map(([k, v]) => [k, String(v)])
+)
 
 export default function App() {
   const [isDark, setIsDark] = useDarkMode()
@@ -31,8 +25,7 @@ export default function App() {
   const [result, setResult] = useState(null)
   const [errorMessage, setErrorMessage] = useState(null)
   const [apiAvailable, setApiAvailable] = useState(true)
-  const [clinicalData, setClinicalData] = useState({ ...INITIAL_CLINICAL })
-  const [clinicalErrors, setClinicalErrors] = useState({})
+  const [wisconsinData, setWisconsinData] = useState({ ...INITIAL_WISCONSIN })
 
   const [token, setToken] = useState(localStorage.getItem('token'))
   const [username, setUsername] = useState(localStorage.getItem('username'))
@@ -66,46 +59,21 @@ export default function App() {
     setPage('login')
   }
 
-  const validateClinical = (data) => {
-    const errs = {}
-    const fields = ['assessment', 'subtlety', 'age', 'density']
-    for (const f of fields) {
-      const v = data[f]
-      if (!v || v === '' || isNaN(Number(v))) {
-        errs[f] = 'Campo requerido'
-      }
-    }
-    return errs
-  }
-
   const runPrediction = useCallback(async (selectedFile) => {
-    const errs = validateClinical(clinicalData)
-    setClinicalErrors(errs)
-    const hasClinical = Object.keys(errs).length === 0
-
     setFile(selectedFile)
     setPreviewUrl(URL.createObjectURL(selectedFile))
     setStatus('loading')
     setErrorMessage(null)
 
     try {
-      const clinicalPayload = hasClinical
-        ? {
-            assessment: clinicalData.assessment,
-            subtlety: clinicalData.subtlety,
-            age: clinicalData.age,
-            density: clinicalData.density,
-          }
-        : {}
-
       const wisconsinPayload = {}
-      for (const [key, value] of Object.entries(clinicalData)) {
+      for (const [key, value] of Object.entries(wisconsinData)) {
         if (key in WISCONSIN_DEFAULTS && value !== '' && value !== undefined) {
           wisconsinPayload[key] = value
         }
       }
 
-      const data = await predictImage(selectedFile, clinicalPayload, wisconsinPayload)
+      const data = await predictImage(selectedFile, wisconsinPayload)
       setResult(data)
       setStatus('success')
       reload()
@@ -113,39 +81,15 @@ export default function App() {
       setErrorMessage(err.message || 'Ocurrió un error inesperado.')
       setStatus('error')
     }
-  }, [clinicalData, reload])
+  }, [wisconsinData, reload])
 
   const handleRetry = () => {
     if (file) runPrediction(file)
   }
 
-  const handleClinicalChange = (key, value) => {
-    setClinicalData((prev) => ({ ...prev, [key]: value }))
-    setClinicalErrors((prev) => {
-      const copy = { ...prev }
-      delete copy[key]
-      return copy
-    })
+  const handleWisconsinChange = (key, value) => {
+    setWisconsinData((prev) => ({ ...prev, [key]: value }))
   }
-  
-  /*
-  if (page === 'login') {
-    return (
-      <>
-        <Login onLogin={handleLogin} />
-        <HelpChatbot />
-      </>
-    )
-  }
-
-  if (page === 'dashboard') {
-    return (
-      <>
-        <Dashboard username={username} onLogout={() => { handleLogout(); setPage('login') }} />
-        <HelpChatbot />
-      </>
-    )
-  }*/
 
   return (
     <div className="min-h-screen bg-bg font-body text-ink">
@@ -180,9 +124,8 @@ export default function App() {
             />
             <ClinicalForm
               show={true}
-              formData={clinicalData}
-              formErrors={clinicalErrors}
-              onChange={handleClinicalChange}
+              formData={wisconsinData}
+              onChange={handleWisconsinChange}
             />
           </div>
           <ResultPanel
