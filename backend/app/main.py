@@ -1,3 +1,4 @@
+#main.py
 import logging
 import time
 import uuid
@@ -17,7 +18,7 @@ from slowapi.errors import RateLimitExceeded
 
 from app.config import settings
 from app.logging_config import setup_logging
-from app.model_handler import model_handler, ModelLoadError, InvalidImageError
+from app.model_handler import model_handler, InvalidImageError
 from app.security import validate_upload_image
 from app.schemas import (
     PredictionResponse,
@@ -109,10 +110,6 @@ def compute_consensus(model_results: list[dict]) -> tuple[str, str, float]:
 async def predict(
     request: Request,
     file: UploadFile = File(...),
-    assessment: Optional[float] = Form(None),
-    subtlety: Optional[float] = Form(None),
-    age: Optional[float] = Form(None),
-    density: Optional[float] = Form(None),
     radius_mean: Optional[float] = Form(None),
     texture_mean: Optional[float] = Form(None),
     perimeter_mean: Optional[float] = Form(None),
@@ -152,15 +149,6 @@ async def predict(
 
     raw_bytes = await validate_upload_image(file)
 
-    clinical_data = None
-    if assessment is not None:
-        clinical_data = [
-            assessment or 3.0,
-            subtlety or 3.0,
-            age or 50.0,
-            density or 2.0,
-        ]
-
     wisconsin_data = None
     wisconsin_fields = [
         radius_mean, texture_mean, perimeter_mean, area_mean,
@@ -182,7 +170,7 @@ async def predict(
         ]
 
     try:
-        results = model_handler.predict_all(raw_bytes, clinical_data, wisconsin_data)
+        results = model_handler.predict_all(raw_bytes, wisconsin_data)
     except InvalidImageError as exc:
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(exc)) from exc
     except Exception as exc:

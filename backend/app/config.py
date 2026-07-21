@@ -10,14 +10,11 @@ from pathlib import Path
 class Settings:
     BASE_DIR: Path = Path(__file__).resolve().parent.parent
 
-    CNN_MODEL_PATH: str = os.getenv("CNN_MODEL_PATH", str(BASE_DIR / "models" / "cnn_efficientnet_20260707_061411.keras"))
-    ENSEMBLE_MODEL_PATH: str = os.getenv("ENSEMBLE_MODEL_PATH", str(BASE_DIR / "models" / "ensemble_20260707_061411.keras"))
-    TABULAR_MODEL_PATH: str = os.getenv("TABULAR_MODEL_PATH", str(BASE_DIR / "models" / "tabular_20260707_061411.pkl"))
+    CNN_MODEL_PATH: str = os.getenv("CNN_MODEL_PATH", str(BASE_DIR / "models" / "cnn_efficientnet_20260720_125151.keras"))
+    TABULAR_MODEL_PATH: str = os.getenv("TABULAR_MODEL_PATH", str(BASE_DIR / "models" / "tabular_rf_20260720_125151.pkl"))
+    EXTRACTOR_HYBRID_MODEL_PATH: str = os.getenv("EXTRACTOR_HYBRID_MODEL_PATH", str(BASE_DIR / "models" / "extractor_hibrid_rf_cnn.keras"))
+    CLASIFIER_HYBRID_MODEL_PATH: str = os.getenv("CLASIFIER_HYBRID_MODEL_PATH", str(BASE_DIR / "models" / "classifier_hibrid_rf_cnn.pkl"))
     WISCONSIN_CSV_PATH: str = os.getenv("WISCONSIN_CSV_PATH", str(BASE_DIR / "CSVFiles" / "data.csv"))
-
-    CNN_MODEL_FILE_ID: str = os.getenv("CNN_MODEL_FILE_ID", "")
-    ENSEMBLE_MODEL_FILE_ID: str = os.getenv("ENSEMBLE_MODEL_FILE_ID", "")
-    TABULAR_MODEL_FILE_ID: str = os.getenv("TABULAR_MODEL_FILE_ID", "")
 
     IMG_SIZE: tuple = (224, 224)
     APPLY_CLAHE: bool = os.getenv("APPLY_CLAHE", "true").lower() == "true"
@@ -46,7 +43,6 @@ class Settings:
         "smoothness_worst": 0.132, "compactness_worst": 0.254, "concavity_worst": 0.272, "concave points_worst": 0.115,
         "symmetry_worst": 0.290, "fractal_dimension_worst": 0.084,
     }
-    CLINICAL_FEATURES: list = ["assessment", "subtlety", "age", "density"]
 
     # --- Validación de archivos ---
     MAX_FILE_SIZE_MB: int = int(os.getenv("MAX_FILE_SIZE_MB", "5"))

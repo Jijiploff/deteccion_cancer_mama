@@ -7,9 +7,10 @@ services:
     ports:
       - "8000:8000"
     environment:
-      CNN_MODEL_PATH: /app/models/cnn_efficientnet_20260707_061411.keras
-      ENSEMBLE_MODEL_PATH: /app/models/ensemble_20260707_061411.keras
-      TABULAR_MODEL_PATH: /app/models/tabular_20260707_061411.pkl
+      CNN_MODEL_PATH: /app/models/cnn_efficientnet_20260720_125151.keras
+      TABULAR_MODEL_PATH: /app/models/tabular_rf_20260720_125151.pkl
+      EXTRACTOR_HYBRID_MODEL_PATH: /app/models/extractor_hibrid_rf_cnn.keras
+      CLASIFIER_HYBRID_MODEL_PATH: /app/models/classifier_hibrid_rf_cnn.pkl
       WISCONSIN_CSV_PATH: /app/CSVFiles/data.csv
       FRONTEND_URL: http://localhost:3000
       ENVIRONMENT: development

@@ -9,9 +9,10 @@ logger = logging.getLogger("download_models")
 REPO_ID = "Jijiploff/cr-mama-fn-models"
 
 FILES = {
-    "cnn_efficientnet_20260707_061411.keras": settings.CNN_MODEL_PATH,
-    "ensemble_20260707_061411.keras": settings.ENSEMBLE_MODEL_PATH,
-    "tabular_20260707_061411.pkl": settings.TABULAR_MODEL_PATH,
+    "cnn_efficientnet_20260720_125151.keras": settings.CNN_MODEL_PATH,
+    "tabular_rf_20260720_125151.pkl": settings.TABULAR_MODEL_PATH,
+    "extractor_hibrid_rf_cnn.keras": settings.EXTRACTOR_HYBRID_MODEL_PATH,
+    "classifier_hibrid_rf_cnn.pkl": settings.CLASIFIER_HYBRID_MODEL_PATH,
 }
 
 
