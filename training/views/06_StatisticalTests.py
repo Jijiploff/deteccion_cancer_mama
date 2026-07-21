@@ -1,113 +1,295 @@
-from pathlib import Path
+import json
 
 import streamlit as st
+import pandas as pd
+import numpy as np
+import plotly.graph_objects as go
+import plotly.express as px
 
-from config import DRIVE_BASE, RANDOM_STATE
-from modules.eda import BreastCancerEDA
-from modules.models import prepare_wisconsin_data, train_xgboost, train_random_forest, evaluate_model
-from modules.statistical_tests import run_all_tests, plot_pvalue_heatmap
+from config import JSON_RESULTS_PATH
 from modules.i18n import get_translation
 
 
 lang = st.session_state.get("language", "es")
 
 
-@st.cache_resource
-def load_data():
-    eda = BreastCancerEDA(DRIVE_BASE)
-    eda.load_all_data()
-    return eda
+def load_json_results():
+    if JSON_RESULTS_PATH.exists():
+        with open(JSON_RESULTS_PATH, encoding="utf-8") as f:
+            return json.load(f)
+    return None
 
+
+def format_model_name(key: str) -> str:
+    names = {
+        "tabular_xgboost": "XGBoost (Wisconsin)",
+        "tabular_rf": "Random Forest (Wisconsin)",
+        "cnn_efficientnet": "CNN (EfficientNet)",
+        "hybrid_cnn_rf": "Hybrid CNN-RF",
+        "hybrid_cnn_xgb": "Hybrid CNN-XGBoost",
+    }
+    return names.get(key, key)
+
+
+data = load_json_results()
 
 st.title(get_translation(lang, "statistical_tests.title"))
 st.markdown(get_translation(lang, "statistical_tests.description"))
 
-drive_ok = Path(DRIVE_BASE).exists()
-if not drive_ok:
-    st.warning(get_translation(lang, "statistical_tests.drive_not_mounted", drive_base=DRIVE_BASE))
+if not data:
+    st.warning("No se encontró el archivo de resultados. Ejecuta el pipeline de entrenamiento primero.")
     st.stop()
 
-try:
-    eda = load_data()
-except Exception as e:
-    st.error(f"{get_translation(lang, 'statistical_tests.error_loading_data')}: {e}")
-    st.stop()
-
-if eda.wisconsin_data is None:
-    st.error(get_translation(lang, "statistical_tests.wisconsin_not_available"))
-    st.stop()
-
-with st.spinner(get_translation(lang, "statistical_tests.preparing_data")):
-    X_train, X_test, y_train, y_test = prepare_wisconsin_data(
-        eda.wisconsin_data, random_state=RANDOM_STATE
-    )
-
-st.success(get_translation(lang, "statistical_tests.data_ready", train_count=len(X_train), test_count=len(X_test)))
-
-with st.spinner(get_translation(lang, "statistical_tests.training_reference")):
-    xgb_model, _ = train_xgboost(X_train, y_train, X_test, y_test)
-    rf_model, _ = train_random_forest(X_train, y_train)
-    xgb_metrics = evaluate_model(xgb_model, X_test, y_test)
-    rf_metrics = evaluate_model(rf_model, X_test, y_test)
-
-models_data = {
-    "XGBoost": {"y_pred": xgb_metrics["y_pred"], "y_proba": xgb_metrics["y_proba"]},
-    "Random Forest": {"y_pred": rf_metrics["y_pred"], "y_proba": rf_metrics["y_proba"]},
-}
-
-st.info(get_translation(lang, "statistical_tests.reference_info"))
-
-st.subheader(get_translation(lang, "statistical_tests.methodology"))
+# ──────────────────────────────────────────────
+# 1. MODELOS DEL SISTEMA
+# ──────────────────────────────────────────────
+st.subheader(get_translation(lang, "statistical_tests.models_section_title"))
+st.markdown(get_translation(lang, "statistical_tests.models_section_desc"))
 
 col1, col2 = st.columns(2)
+
 with col1:
-    st.markdown(f"#### {get_translation(lang, 'statistical_tests.mcnemar')}")
-    st.markdown(get_translation(lang, "statistical_tests.mcnemar_description"))
+    st.markdown(f"**{get_translation(lang, 'statistical_tests.classic_models_title')}**")
+    classic_df = pd.DataFrame([
+        [get_translation(lang, "statistical_tests.model_cnn"),
+         get_translation(lang, "statistical_tests.model_cnn_data"),
+         get_translation(lang, "statistical_tests.model_cnn_training"),
+         get_translation(lang, "statistical_tests.model_cnn_purpose")],
+        [get_translation(lang, "statistical_tests.model_xgb"),
+         get_translation(lang, "statistical_tests.model_xgb_data"),
+         get_translation(lang, "statistical_tests.model_xgb_training"),
+         get_translation(lang, "statistical_tests.model_xgb_purpose")],
+        [get_translation(lang, "statistical_tests.model_rf"),
+         get_translation(lang, "statistical_tests.model_rf_data"),
+         get_translation(lang, "statistical_tests.model_rf_training"),
+         get_translation(lang, "statistical_tests.model_rf_purpose")],
+    ], columns=[
+        get_translation(lang, "statistical_tests.model_col"),
+        get_translation(lang, "statistical_tests.data_col"),
+        get_translation(lang, "statistical_tests.training_col"),
+        get_translation(lang, "statistical_tests.purpose_col"),
+    ])
+    st.table(classic_df)
+
 with col2:
-    st.markdown(f"#### {get_translation(lang, 'statistical_tests.wilcoxon')}")
-    st.markdown(get_translation(lang, "statistical_tests.wilcoxon_description"))
+    st.markdown(f"**{get_translation(lang, 'statistical_tests.hybrid_models_title')}**")
+    hybrid_df = pd.DataFrame([
+        [get_translation(lang, "statistical_tests.model_ensemble"),
+         get_translation(lang, "statistical_tests.model_ensemble_data"),
+         get_translation(lang, "statistical_tests.model_ensemble_training"),
+         get_translation(lang, "statistical_tests.model_ensemble_purpose")],
+        [get_translation(lang, "statistical_tests.model_hybrid"),
+         get_translation(lang, "statistical_tests.model_hybrid_data"),
+         get_translation(lang, "statistical_tests.model_hybrid_training"),
+         get_translation(lang, "statistical_tests.model_hybrid_purpose")],
+    ], columns=[
+        get_translation(lang, "statistical_tests.model_col"),
+        get_translation(lang, "statistical_tests.data_col"),
+        get_translation(lang, "statistical_tests.training_col"),
+        get_translation(lang, "statistical_tests.purpose_col"),
+    ])
+    st.table(hybrid_df)
 
-if st.button(get_translation(lang, "statistical_tests.run_tests"), type="primary", use_container_width=True):
-    results_df = run_all_tests(models_data, y_test)
+st.divider()
 
-    st.success(get_translation(lang, "statistical_tests.tests_complete"))
+# ──────────────────────────────────────────────
+# 2. MÉTRICAS COMPLETAS (TODOS LOS MODELOS)
+# ──────────────────────────────────────────────
+st.subheader(get_translation(lang, "statistical_tests.metrics_title"))
 
-    st.subheader(get_translation(lang, "statistical_tests.pairwise_results"))
+metricas = data.get("fase2_modelado", {}).get("metricas_test", {})
 
-    display_df = results_df[
-        [get_translation(lang, "statistical_tests.model_a"),
-         get_translation(lang, "statistical_tests.model_b"),
-         get_translation(lang, "statistical_tests.mcnemar_pvalue"),
-         get_translation(lang, "statistical_tests.mcnemar_interpretation"),
-         get_translation(lang, "statistical_tests.wilcoxon_pvalue"),
-         get_translation(lang, "statistical_tests.wilcoxon_interpretation")]
-    ]
+if metricas:
+    metrics_rows = []
+    for model_key, m in metricas.items():
+        metrics_rows.append({
+            get_translation(lang, "statistical_tests.model_col"): format_model_name(model_key),
+            "Accuracy": f"{m['accuracy']:.4f}",
+            "Precision": f"{m['precision']:.4f}",
+            "Recall": f"{m['recall']:.4f}",
+            "F1-Score": f"{m['f1']:.4f}",
+            "AUC-ROC": f"{m['auc']:.4f}",
+        })
+    st.table(pd.DataFrame(metrics_rows))
 
-    styled = display_df.style.applymap(
-        lambda v: "color: red; font-weight: bold" if isinstance(v, str) and get_translation(lang, "statistical_tests.significant") in v
-        else ("color: green" if isinstance(v, str) and get_translation(lang, "statistical_tests.no_differences") in v else ""),
-        subset=[get_translation(lang, "statistical_tests.mcnemar_interpretation"),
-                get_translation(lang, "statistical_tests.wilcoxon_interpretation")],
-    )
+    # Mejor modelo
+    best_key = max(metricas, key=lambda k: metricas[k]["auc"] * 0.4 + metricas[k]["f1"] * 0.3 + metricas[k]["accuracy"] * 0.3)
+    best = metricas[best_key]
+    st.success(get_translation(lang, "statistical_tests.best_model_result").format(
+        model=format_model_name(best_key),
+        auc=f"{best['auc']:.4f}",
+        accuracy=f"{best['accuracy']:.4f}",
+        f1=f"{best['f1']:.4f}",
+    ))
+
+st.divider()
+
+# ──────────────────────────────────────────────
+# 3. VISTA UNIFICADA
+# ──────────────────────────────────────────────
+st.subheader(get_translation(lang, "statistical_tests.unified_view_title"))
+st.markdown(get_translation(lang, "statistical_tests.unified_view_desc"))
+
+if metricas:
+    unified_rows = []
+    for model_key, m in metricas.items():
+        score = m["auc"] * 0.4 + m["f1"] * 0.3 + m["accuracy"] * 0.3
+        group = "Tabular" if model_key in ("tabular_xgboost", "tabular_rf") else "Imagen"
+        unified_rows.append({
+            get_translation(lang, "statistical_tests.model_col"): format_model_name(model_key),
+            "Accuracy": m["accuracy"],
+            "Precision": m["precision"],
+            "Recall": m["recall"],
+            "F1-Score": m["f1"],
+            "AUC-ROC": m["auc"],
+            get_translation(lang, "statistical_tests.score_col"): round(score, 4),
+            "Grupo": group,
+        })
+
+    unified_df = pd.DataFrame(unified_rows)
+    metric_cols = ["Accuracy", "Precision", "Recall", "F1-Score", "AUC-ROC", get_translation(lang, "statistical_tests.score_col")]
+    display_cols = [get_translation(lang, "statistical_tests.model_col")] + metric_cols + ["Grupo"]
+    display_unified = unified_df[display_cols]
+
+    styled = display_unified.style
+    for col in metric_cols:
+        col_max = unified_df[col].max()
+        styled = styled.map(
+            lambda v, mx=col_max: "background-color: #90EE90; font-weight: bold"
+                if isinstance(v, (int, float)) and v == mx else "",
+            subset=[col],
+        )
     st.dataframe(styled, use_container_width=True)
+    st.caption(get_translation(lang, "statistical_tests.score_formula"))
 
-    st.subheader(get_translation(lang, "statistical_tests.heatmap"))
-    st.plotly_chart(plot_pvalue_heatmap(results_df), use_container_width=True)
-
-    st.subheader(get_translation(lang, "statistical_tests.general_interpretation"))
-    sig_count = sum(
-        1 for _, r in results_df.iterrows()
-        if isinstance(r[get_translation(lang, "statistical_tests.mcnemar_pvalue")], (int, float))
-        and r[get_translation(lang, "statistical_tests.mcnemar_pvalue")] < 0.05
+    # Gráfico
+    chart_df = unified_df.melt(
+        id_vars=[get_translation(lang, "statistical_tests.model_col"), "Grupo"],
+        value_vars=["Accuracy", "Precision", "Recall", "F1-Score", "AUC-ROC"],
+        var_name="Métrica",
+        value_name="Valor (%)",
     )
-    total = len(results_df)
+    chart_df["Valor (%)"] = (chart_df["Valor (%)"] * 100).round(1)
 
-    if sig_count == 0:
-        st.success(get_translation(lang, "statistical_tests.no_significant", total=total))
-    elif sig_count < total:
-        st.warning(get_translation(lang, "statistical_tests.some_significant", sig_count=sig_count, total=total))
-    else:
-        st.error(get_translation(lang, "statistical_tests.all_significant", total=total))
+    fig = px.bar(
+        chart_df,
+        x="Métrica",
+        y="Valor (%)",
+        color=get_translation(lang, "statistical_tests.model_col"),
+        barmode="group",
+        text="Valor (%)",
+        color_discrete_sequence=px.colors.qualitative.Set2,
+    )
+    fig.update_traces(textposition="outside", textfont_size=10)
+    fig.update_layout(
+        yaxis_range=[0, 105],
+        height=450,
+        margin=dict(t=30, b=30),
+        legend_title_text=get_translation(lang, "statistical_tests.model_col"),
+    )
+    st.plotly_chart(fig, use_container_width=True)
 
-    with st.expander(get_translation(lang, "statistical_tests.how_to_interpret")):
-        st.markdown(get_translation(lang, "statistical_tests.interpretation_guide"))
+st.divider()
+
+# ──────────────────────────────────────────────
+# 4. PRUEBAS POR PARES (desde JSON)
+# ──────────────────────────────────────────────
+pruebas = data.get("pruebas_estadisticas", {})
+
+st.subheader("📊 Pruebas Estadísticas por Pares")
+st.markdown("Resultados de **McNemar**, **Wilcoxon**, **DeLong** y **t-pareada** precomputados desde Google Colab.")
+
+resumen = pruebas.get("resumen_pares", [])
+if resumen:
+    pairs_df = pd.DataFrame(resumen)
+    st.dataframe(pairs_df, use_container_width=True)
+
+    # Heatmap de p-valores (McNemar)
+    mcnemar = pruebas.get("mcnemar_pvalues", {})
+    if mcnemar:
+        st.subheader(get_translation(lang, "statistical_tests.heatmap"))
+        model_names = list(mcnemar.keys())
+        n = len(model_names)
+        heatmap_data = np.full((n, n), np.nan)
+        for i, a in enumerate(model_names):
+            for j, b in enumerate(model_names):
+                if a == b:
+                    heatmap_data[i][j] = 1.0
+                elif b in mcnemar.get(a, {}):
+                    v = mcnemar[a][b]
+                    heatmap_data[i][j] = v if v is not None else 1.0
+                elif a in mcnemar.get(b, {}):
+                    v = mcnemar[b][a]
+                    heatmap_data[i][j] = v if v is not None else 1.0
+
+        fig_heat = px.imshow(
+            heatmap_data,
+            x=[format_model_name(m) for m in model_names],
+            y=[format_model_name(m) for m in model_names],
+            color_continuous_scale="RdBu_r",
+            zmin=0, zmax=1,
+            text_auto=".4f",
+            aspect="auto",
+            height=500,
+            title="McNemar p-valores",
+        )
+        fig_heat.update_layout(margin=dict(t=40))
+        st.plotly_chart(fig_heat, use_container_width=True)
+
+    # Interpretación general
+    if resumen:
+        total = len(resumen)
+        sig_count = sum(1 for r in resumen if r.get("Significativo (Bonferroni)", False))
+        if sig_count == 0:
+            st.info(get_translation(lang, "statistical_tests.no_significant", total=total))
+        elif sig_count == total:
+            st.warning(get_translation(lang, "statistical_tests.all_significant", total=total))
+        else:
+            st.info(get_translation(lang, "statistical_tests.some_significant", sig_count=sig_count, total=total))
+
+st.divider()
+
+# ──────────────────────────────────────────────
+# 5. RANKING
+# ──────────────────────────────────────────────
+ranking = data.get("ranking_modelos", {})
+if ranking and "tabla" in ranking:
+    st.subheader("🏆 Ranking de Modelos")
+
+    rank_df = pd.DataFrame(ranking["tabla"])
+    display_cols = [c for c in ["Puesto", "Modelo", "accuracy", "precision", "recall", "f1", "auc",
+                                  "Score compuesto", "CV Accuracy (media)", "CV AUC (media)"] if c in rank_df.columns]
+    display_rank = rank_df[display_cols].copy()
+    for col in display_rank.columns:
+        if col not in ["Puesto", "Modelo"]:
+            display_rank[col] = display_rank[col].apply(lambda x: f"{x:.4f}")
+    st.dataframe(display_rank, use_container_width=True)
+
+    mejor = ranking.get("mejor_modelo", "")
+    if mejor:
+        st.success(
+            f"{get_translation(lang, 'statistical_tests.best_model_overall')}: **{format_model_name(mejor)}**"
+        )
+
+st.divider()
+
+# ──────────────────────────────────────────────
+# 6. CONCLUSIONES
+# ──────────────────────────────────────────────
+st.subheader(get_translation(lang, "statistical_tests.conclusions_title"))
+
+conc_col1, conc_col2 = st.columns(2)
+
+with conc_col1:
+    st.markdown(f"**{get_translation(lang, 'statistical_tests.classic_models_title')}**")
+    st.markdown(get_translation(lang, "statistical_tests.conclusion_cnn"))
+    st.markdown("---")
+    st.markdown(get_translation(lang, "statistical_tests.conclusion_xgb"))
+    st.markdown("---")
+    st.markdown(get_translation(lang, "statistical_tests.conclusion_rf"))
+
+with conc_col2:
+    st.markdown(f"**{get_translation(lang, 'statistical_tests.hybrid_models_title')}**")
+    st.markdown(get_translation(lang, "statistical_tests.conclusion_ensemble"))
+    st.markdown("---")
+    st.markdown(get_translation(lang, "statistical_tests.conclusion_hybrid"))

@@ -1,0 +1,19 @@
+INFO:     Will watch for changes in these directories: ['C:\\Users\\Zaleth\\Downloads\\Cancer de mama\\deteccion_cancer_mama\\backend']
+INFO:     Uvicorn running on http://127.0.0.1:8000 (Press CTRL+C to quit)
+INFO:     Started reloader process [2944] using WatchFiles
+C:\Users\Zaleth\Downloads\Cancer de mama\deteccion_cancer_mama\backend\venv\Lib\site-packages\pydantic\_internal\_fields.py:132: UserWarning: Field "model_name" in ModelResult has conflict with protected namespace "model_".
+
+You may be able to resolve this warning by setting `model_config['protected_namespaces'] = ()`.
+  warnings.warn(
+C:\Users\Zaleth\Downloads\Cancer de mama\deteccion_cancer_mama\backend\venv\Lib\site-packages\pydantic\_internal\_fields.py:132: UserWarning: Field "model_label" in ModelResult has conflict with protected namespace "model_".
+
+You may be able to resolve this warning by setting `model_config['protected_namespaces'] = ()`.
+  warnings.warn(
+C:\Users\Zaleth\Downloads\Cancer de mama\deteccion_cancer_mama\backend\venv\Lib\site-packages\pydantic\_internal\_fields.py:132: UserWarning: Field "model_path" in HealthResponse has conflict with protected namespace "model_".
+
+You may be able to resolve this warning by setting `model_config['protected_namespaces'] = ()`.
+  warnings.warn(
+INFO:     Started server process [12388]
+INFO:     Waiting for application startup.
+WARNING: All log messages before absl::InitializeLog() is called are written to STDERR
+I0000 00:00:1784049252.827087   12948 port.cc:153] oneDNN custom operations are on. You may see slightly different numerical results due to floating-point round-off errors from different computation orders. To turn them off, set the environment variable `TF_ENABLE_ONEDNN_OPTS=0`.

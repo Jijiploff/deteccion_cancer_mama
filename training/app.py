@@ -20,13 +20,6 @@ st.set_page_config(
 
 
 def apply_theme(theme: str):
-    """
-    Aplica el CSS del tema. Se debe llamar en app.py y en CADA archivo
-    dentro de views/ (antes 'pages/') para que el estilo sea consistente
-    en toda la navegación.
-    """
-    # Oculta la navegación nativa de Streamlit por si alguna vez existe
-    # una carpeta llamada 'pages' junto a este script.
     hide_native_nav = """
         <style>
             [data-testid="stSidebarNav"] { display: none; }
@@ -47,8 +40,6 @@ def apply_theme(theme: str):
                 .stMarkdown, .stText, p, h1, h2, h3, h4, h5, h6, span, div, label {
                     color: #000000 !important;
                 }
-
-                /* --- Botones (normal, sidebar y dentro de forms) --- */
                 .stButton > button,
                 [data-testid="stSidebar"] .stButton > button,
                 [data-testid="baseButton-secondary"],
@@ -66,8 +57,6 @@ def apply_theme(theme: str):
                 .stButton > button p {
                     color: inherit !important;
                 }
-
-                /* --- Inputs / selects / text areas --- */
                 .stTextInput input,
                 .stNumberInput input,
                 .stTextArea textarea,
@@ -77,8 +66,6 @@ def apply_theme(theme: str):
                     color: #000000 !important;
                     border: 1px solid #D1D5DB !important;
                 }
-
-                /* --- Tablas / dataframes --- */
                 [data-testid="stDataFrame"] table {
                     background-color: #FFFFFF !important;
                     color: #000000 !important;
@@ -91,8 +78,6 @@ def apply_theme(theme: str):
                     background-color: #FFFFFF !important;
                     color: #000000 !important;
                 }
-
-                /* --- Tablas estáticas (st.table) --- */
                 [data-testid="stTable"] table,
                 [data-testid="stTable"] th,
                 [data-testid="stTable"] td {
@@ -102,8 +87,6 @@ def apply_theme(theme: str):
                 [data-testid="stTable"] th {
                     background-color: #E5E7EB !important;
                 }
-
-                /* --- Header / toolbar nativos de Streamlit --- */
                 [data-testid="stHeader"] {
                     background-color: #FFFFFF !important;
                 }
@@ -114,12 +97,6 @@ def apply_theme(theme: str):
                 [data-testid="stToolbar"] svg {
                     fill: #000000 !important;
                 }
-
-                /* --- Barra de herramientas flotante del st.dataframe --- */
-                /* (ícono ojo / descargar / lupa / pantalla completa que aparece */
-                /* al pasar el mouse). El dataframe se deja con su tema nativo */
-                /* oscuro, así que estos íconos deben permanecer blancos y no */
-                /* heredar el color negro del texto general en modo claro. */
                 [data-testid="stElementToolbar"],
                 [data-testid="stElementToolbar"] * {
                     color: #FFFFFF !important;
@@ -148,8 +125,6 @@ def apply_theme(theme: str):
                 .stMarkdown, .stText, p, h1, h2, h3, h4, h5, h6, span, div, label {
                     color: #F1F1F6 !important;
                 }
-
-                /* --- Botones --- */
                 .stButton > button,
                 [data-testid="stSidebar"] .stButton > button,
                 [data-testid="baseButton-secondary"],
@@ -167,8 +142,6 @@ def apply_theme(theme: str):
                 .stButton > button p {
                     color: inherit !important;
                 }
-
-                /* --- Inputs / selects / text areas --- */
                 .stTextInput input,
                 .stNumberInput input,
                 .stTextArea textarea,
@@ -178,8 +151,6 @@ def apply_theme(theme: str):
                     color: #F1F1F6 !important;
                     border: 1px solid #3F3F5C !important;
                 }
-
-                /* --- Tablas / dataframes --- */
                 [data-testid="stDataFrame"] table {
                     background-color: #1A1A2E !important;
                     color: #F1F1F6 !important;
@@ -192,8 +163,6 @@ def apply_theme(theme: str):
                     background-color: #1A1A2E !important;
                     color: #F1F1F6 !important;
                 }
-
-                /* --- Tablas estáticas (st.table) --- */
                 [data-testid="stTable"] table,
                 [data-testid="stTable"] th,
                 [data-testid="stTable"] td {
@@ -203,8 +172,6 @@ def apply_theme(theme: str):
                 [data-testid="stTable"] th {
                     background-color: #2D2D44 !important;
                 }
-
-                /* --- Header / toolbar nativos de Streamlit --- */
                 [data-testid="stHeader"] {
                     background-color: #0F0F1A !important;
                 }
@@ -233,7 +200,6 @@ st.sidebar.markdown("---")
 
 # Theme and language toggles
 st.sidebar.subheader(get_translation(st.session_state.language, "theme"))
-# El botón debe indicar la ACCIÓN (a qué modo se cambiará), no el modo actual.
 if st.session_state.theme == "dark":
     toggle_label = f"☀️ {get_translation(st.session_state.language, 'light')}"
 else:
@@ -250,20 +216,12 @@ if st.sidebar.button(f"🌐 {lang_label}", use_container_width=True):
 
 st.sidebar.markdown("---")
 
-# Page navigation
-# NOTA: se usa la carpeta 'views/' en lugar de 'pages/' a propósito.
-# Streamlit auto-detecta cualquier carpeta llamada 'pages' junto al script
-# principal y genera su propia navegación nativa en la sidebar, la cual
-# ejecuta esos archivos de forma AISLADA (sin pasar por este app.py).
-# Eso hacía que el CSS de tema y los botones de idioma/tema no aparecieran
-# en las demás páginas. Renombrando a 'views/' evitamos ese conflicto y
-# garantizamos que TODA la navegación pase por la lógica de exec() de abajo.
 PAGES = {
     get_translation(st.session_state.language, "pages.dashboard"): "views/01_Dashboard.py",
     get_translation(st.session_state.language, "pages.eda"): "views/02_EDA.py",
-    get_translation(st.session_state.language, "pages.training"): "views/03_Training.py",
-    get_translation(st.session_state.language, "pages.cross_validation"): "views/04_CrossValidation.py",
-    get_translation(st.session_state.language, "pages.hyperparameter_tuning"): "views/05_HyperparameterTuning.py",
+    get_translation(st.session_state.language, "pages.models"): "views/03_Models.py",
+    get_translation(st.session_state.language, "pages.results"): "views/04_Results.py",
+    get_translation(st.session_state.language, "pages.tuning_results"): "views/05_TuningResults.py",
     get_translation(st.session_state.language, "pages.statistical_tests"): "views/06_StatisticalTests.py",
     get_translation(st.session_state.language, "pages.reports"): "views/07_Reports.py",
 }

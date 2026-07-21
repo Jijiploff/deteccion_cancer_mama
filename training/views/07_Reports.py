@@ -1,14 +1,14 @@
-from pathlib import Path
+import json
 import tempfile
+from pathlib import Path
 
 import streamlit as st
 import pandas as pd
 
-from config import DRIVE_BASE, RESULTS_DIR, RANDOM_STATE
+from config import RESULTS_DIR, JSON_RESULTS_PATH, DATA_DIR, TABULAR_DIR, RANDOM_STATE
 from modules.eda import BreastCancerEDA
 from modules.models import (
     prepare_wisconsin_data, train_xgboost, train_random_forest, evaluate_model,
-    save_model,
 )
 from modules.cross_validation import run_cross_validation
 from modules.hyperparameter_tuning import run_grid_search, XGBOOST_GRID
@@ -25,22 +25,32 @@ lang = st.session_state.get("language", "es")
 
 
 @st.cache_resource
-def load_data():
-    eda = BreastCancerEDA(DRIVE_BASE)
+def load_eda():
+    eda = BreastCancerEDA(
+        csv_path=str(DATA_DIR),
+        tabular_path=str(TABULAR_DIR),
+        results_path=str(RESULTS_DIR),
+    )
     eda.load_all_data()
     return eda
+
+
+def load_json_results():
+    if JSON_RESULTS_PATH.exists():
+        with open(JSON_RESULTS_PATH, encoding="utf-8") as f:
+            return json.load(f)
+    return None
 
 
 st.title(get_translation(lang, "reports.title"))
 st.markdown(get_translation(lang, "reports.description"))
 
-drive_ok = Path(DRIVE_BASE).exists()
-if not drive_ok:
-    st.warning(get_translation(lang, "reports.drive_not_mounted", drive_base=DRIVE_BASE))
+if not DATA_DIR.exists():
+    st.error(f"Directorio de datos no encontrado: `{DATA_DIR}`")
     st.stop()
 
 try:
-    eda = load_data()
+    eda = load_eda()
 except Exception as e:
     st.error(f"{get_translation(lang, 'reports.error_loading_data')}: {e}")
     st.stop()
@@ -72,6 +82,15 @@ if st.button(get_translation(lang, "reports.run_pipeline"), type="primary", use_
         rf_metrics["training_time_s"] = rf_time
         results = {"XGBoost": xgb_metrics, "Random Forest": rf_metrics}
 
+        # Cargar métricas precomputadas del JSON para los modelos de imagen
+        json_data = load_json_results()
+        if json_data:
+            metricas_json = json_data.get("fase2_modelado", {}).get("metricas_test", {})
+            for key, m in metricas_json.items():
+                if key in ("cnn_efficientnet", "hybrid_cnn_rf", "hybrid_cnn_xgb"):
+                    model_label = {"cnn_efficientnet": "CNN", "hybrid_cnn_rf": "Hybrid CNN-RF", "hybrid_cnn_xgb": "Hybrid CNN-XGBoost"}.get(key, key)
+                    results[model_label] = m
+
         st.write(get_translation(lang, "reports.running_cv"))
         cv_xgb = run_cross_validation(X_all, y_all, "XGBoost", n_splits=5, random_state=RANDOM_STATE)
         cv_rf = run_cross_validation(X_all, y_all, "Random Forest", n_splits=5, random_state=RANDOM_STATE)
@@ -89,14 +108,21 @@ if st.button(get_translation(lang, "reports.run_pipeline"), type="primary", use_
         st.write(get_translation(lang, "reports.generating_figures"))
         figures = {}
         for name in results:
-            figures[f"cm_{name}"] = generate_confusion_matrix_fig(
-                results[name]["confusion_matrix"], title=f"{name} - Confusion Matrix"
-            )
-        probas_dict = {name: m["y_proba"] for name, m in results.items()}
-        figures["roc"] = generate_roc_curve_fig(y_test, probas_dict)
-        figures["metrics_bar"] = generate_metrics_bar_fig(results)
+            cm = results[name].get("confusion_matrix", {})
+            if cm:
+                figures[f"cm_{name}"] = generate_confusion_matrix_fig(cm, title=f"{name} - Confusion Matrix")
+        probas_dict = {}
+        if "XGBoost" in results:
+            probas_dict["XGBoost"] = results["XGBoost"].get("y_proba", [])
+        if "Random Forest" in results:
+            probas_dict["Random Forest"] = results["Random Forest"].get("y_proba", [])
+        if probas_dict and y_test is not None:
+            figures["roc"] = generate_roc_curve_fig(y_test, probas_dict)
+        if results:
+            figures["metrics_bar"] = generate_metrics_bar_fig(results)
         for cv in [cv_xgb, cv_rf]:
-            figures[f"cv_{cv['model_name']}"] = generate_cv_bar_fig(cv["fold_results"])
+            if cv and "fold_results" in cv:
+                figures[f"cv_{cv['model_name']}"] = generate_cv_bar_fig(cv["fold_results"])
 
         eda_summary = eda.get_data_summary()
 

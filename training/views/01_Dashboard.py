@@ -1,13 +1,14 @@
+import json
+from pathlib import Path
+
 import streamlit as st
 import pandas as pd
-from pathlib import Path
-import re
 
 from config import (
-    DATA_DIR, IMAGES_DIR, TABULAR_DIR, MODELS_DIR,
-    RESULTS_DIR, FALLBACK_MODELS_DIR, DRIVE_BASE,
+    DATA_DIR, MODELS_DIR, TABULAR_DIR, RESULTS_DIR, JSON_RESULTS_PATH,
 )
 from modules.i18n import get_translation
+
 
 lang = st.session_state.get("language", "es")
 
@@ -48,16 +49,24 @@ def get_model_type(filename: str) -> str:
         return "Tabular"
     return "Unknown"
 
+
+def load_json_results():
+    if JSON_RESULTS_PATH.exists():
+        with open(JSON_RESULTS_PATH, encoding="utf-8") as f:
+            return json.load(f)
+    return None
+
+
 st.title(get_translation(lang, "dashboard.title"))
 st.markdown(get_translation(lang, "dashboard.welcome"))
 
-drive_available = Path(DRIVE_BASE).exists()
 st.info(
-    f"**{get_translation(lang, 'dashboard.base_path')}:** `{DRIVE_BASE}`  \n"
-    f"{'✅ ' + get_translation(lang, 'dashboard.drive_detected') if drive_available else '⚠️ ' + get_translation(lang, 'dashboard.drive_not_mounted')}"
-    if not drive_available else
-    f"**{get_translation(lang, 'dashboard.base_path')}:** `{DRIVE_BASE}`  \n✅ {get_translation(lang, 'dashboard.drive_mounted_correctly')}"
+    f"**{get_translation(lang, 'dashboard.base_path')}:** `{DATA_DIR.parent}`  \n"
+    "✅ Datos locales"
 )
+
+# ── Métricas principales ────────────────────────────────
+data = load_json_results()
 
 col1, col2, col3, col4 = st.columns(4)
 
@@ -66,11 +75,10 @@ total_csv = len(csv_files)
 col1.metric(get_translation(lang, "dashboard.csv_files"), total_csv)
 
 model_files = []
-for md in [MODELS_DIR, FALLBACK_MODELS_DIR]:
-    if md.exists():
-        for f in md.glob("*"):
-            if f.suffix in (".keras", ".h5", ".pkl"):
-                model_files.append(f)
+if MODELS_DIR.exists():
+    for f in MODELS_DIR.glob("*"):
+        if f.suffix in (".keras", ".h5", ".pkl"):
+            model_files.append(f)
 
 model_types = {}
 for f in model_files:
@@ -79,9 +87,19 @@ for f in model_files:
 
 unique_types = len(model_types)
 total_models = len(model_files)
-col2.metric(get_translation(lang, "dashboard.total_models"), f"{total_models} ({unique_types} {get_translation(lang, 'dashboard.total_models_sub')})")
+col2.metric(
+    get_translation(lang, "dashboard.total_models"),
+    f"{total_models} ({unique_types} {get_translation(lang, 'dashboard.total_models_sub')})",
+)
 
-if TABULAR_DIR.exists():
+if data:
+    wis = data.get("fase1_eda", {}).get("distribucion_wisconsin", {})
+    total_wis = wis.get("B", 0) + wis.get("M", 0)
+    malignant = wis.get("M", 0)
+    benign = wis.get("B", 0)
+    col3.metric(get_translation(lang, "dashboard.wisconsin_cases"), total_wis)
+    col4.metric(get_translation(lang, "dashboard.malignant_benign"), f"{malignant} / {benign}")
+else:
     wis_path = TABULAR_DIR / "data.csv"
     if wis_path.exists():
         df = pd.read_csv(wis_path)
@@ -93,76 +111,52 @@ if TABULAR_DIR.exists():
     else:
         col3.metric(get_translation(lang, "dashboard.wisconsin_cases"), get_translation(lang, "dashboard.no_data"))
         col4.metric(get_translation(lang, "dashboard.malignant_benign"), get_translation(lang, "dashboard.no_data"))
-else:
-    col3.metric(get_translation(lang, "dashboard.wisconsin_cases"), get_translation(lang, "dashboard.no_data_folder"))
-    col4.metric(get_translation(lang, "dashboard.malignant_benign"), get_translation(lang, "dashboard.no_data_folder"))
 
+# ── Archivos CSV ────────────────────────────────────────
 st.markdown("---")
 st.subheader(get_translation(lang, "dashboard.data_files"))
 
-tab1, tab2 = st.tabs([get_translation(lang, "dashboard.google_drive"), get_translation(lang, "dashboard.local_backend")])
+if DATA_DIR.exists():
+    data_rows = []
+    for f in sorted(csv_files):
+        size_kb = f.stat().st_size / 1024
+        data_rows.append({
+            get_translation(lang, "dashboard.model"): f.name,
+            "Tamaño (KB)" if lang == "es" else "Size (KB)": f"{size_kb:.1f}",
+        })
+    st.table(pd.DataFrame(data_rows))
+else:
+    st.warning(f"{get_translation(lang, 'dashboard.path_not_found')}: `{DATA_DIR}`")
 
-with tab1:
-    if DATA_DIR.exists():
-        data = []
-        for f in csv_files:
-            size_kb = f.stat().st_size / 1024
-            data.append({
-                get_translation(lang, "dashboard.model"): f.name,
-                "Tamaño (KB)" if lang == "es" else "Size (KB)": f"{size_kb:.1f}"
-            })
-        # st.table en vez de st.dataframe: st.dataframe se renderiza como una
-        # grilla interactiva sobre <canvas> (glide-data-grid) que toma sus
-        # colores del tema nativo de Streamlit, no de nuestro CSS inyectado.
-        # st.table es HTML real, así que sí respeta el tema claro/oscuro.
-        st.table(pd.DataFrame(data))
-    else:
-        st.warning(f"{get_translation(lang, 'dashboard.path_not_found')}: `{DATA_DIR}`")
-
-with tab2:
-    local_dir = FALLBACK_MODELS_DIR.parent / "CSVFiles"
-    if local_dir.exists():
-        data = []
-        for f in local_dir.glob("*.csv"):
-            size_kb = f.stat().st_size / 1024
-            data.append({
-                get_translation(lang, "dashboard.model"): f.name,
-                "Tamaño (KB)" if lang == "es" else "Size (KB)": f"{size_kb:.1f}"
-            })
-        st.table(pd.DataFrame(data))
-    else:
-        st.warning(f"{get_translation(lang, 'dashboard.path_not_found')}: `{local_dir}`")
-
+# ── Modelos ─────────────────────────────────────────────
 st.subheader(get_translation(lang, "dashboard.trained_models"))
-for label, md in [("Google Drive", MODELS_DIR), ("Local backend/models", FALLBACK_MODELS_DIR)]:
-    if md.exists():
-        files = [f for f in md.glob("*") if f.suffix in (".keras", ".h5", ".pkl")]
-        if not files:
-            continue
-        st.markdown(f"**{label}**")
-        data = []
-        for f in files:
-            size_mb = f.stat().st_size / (1024 * 1024)
-            data.append({
-                get_translation(lang, "dashboard.type"): classify_model(f.name),
-                get_translation(lang, "dashboard.model"): f.name,
-                get_translation(lang, "dashboard.size_mb"): f"{size_mb:.2f}",
-            })
-        df = pd.DataFrame(data)
-        st.table(df.sort_values(get_translation(lang, "dashboard.type")))
+
+if model_files:
+    mdl_rows = []
+    for f in sorted(model_files, key=lambda x: (get_model_type(x.name), x.name)):
+        size_mb = f.stat().st_size / (1024 * 1024)
+        mdl_rows.append({
+            get_translation(lang, "dashboard.type"): classify_model(f.name),
+            get_translation(lang, "dashboard.model"): f.name,
+            get_translation(lang, "dashboard.size_mb"): f"{size_mb:.2f}",
+        })
+    st.table(pd.DataFrame(mdl_rows).sort_values(get_translation(lang, "dashboard.type")))
+else:
+    st.info("No hay modelos descargados localmente. Se descargarán desde HuggingFace Hub al configurar las credenciales.")
 
 with st.expander(get_translation(lang, "dashboard.summary_by_type")):
-    rows = []
+    type_rows = []
     for cat_label, _, _ in MODEL_CATEGORIES:
         count = sum(1 for f in model_files if classify_model(f.name) == cat_label)
         if count > 0:
-            rows.append({
+            type_rows.append({
                 get_translation(lang, "dashboard.type"): cat_label,
-                get_translation(lang, "dashboard.quantity"): count
+                get_translation(lang, "dashboard.quantity"): count,
             })
-    if rows:
-        st.table(pd.DataFrame(rows).set_index(get_translation(lang, "dashboard.type")))
+    if type_rows:
+        st.table(pd.DataFrame(type_rows).set_index(get_translation(lang, "dashboard.type")))
 
+# ── Workflow ────────────────────────────────────────────
 st.markdown("---")
 st.subheader(get_translation(lang, "dashboard.recommended_workflow"))
 workflow_steps = get_translation(lang, "dashboard.workflow_steps")
