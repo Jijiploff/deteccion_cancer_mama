@@ -26,15 +26,9 @@ export async function checkHealth() {
   return handleResponse(response)
 }
 
-export async function predictImage(file, clinicalData = {}, wisconsinData = {}) {
+export async function predictImage(file, wisconsinData = {}) {
   const formData = new FormData()
   formData.append('file', file)
-
-  for (const [key, value] of Object.entries(clinicalData)) {
-    if (value !== null && value !== undefined && value !== '') {
-      formData.append(key, String(value))
-    }
-  }
 
   for (const [key, value] of Object.entries(wisconsinData)) {
     if (value !== null && value !== undefined && value !== '') {
